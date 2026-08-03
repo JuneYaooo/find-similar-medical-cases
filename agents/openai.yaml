@@ -1,0 +1,4 @@
+interface:
+  display_name: "相似病例检索"
+  short_description: "Comprehensively find and verify similar medical cases"
+  default_prompt: "Use $find-similar-medical-cases to run a comprehensive, reproducible search for cases similar to my de-identified medical presentation."

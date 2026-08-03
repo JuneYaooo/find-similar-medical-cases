@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "purpose": "Candidate medical WeChat accounts for case discovery. Resolve and verify identity before changing status to allowlisted.",
+  "verification_rule": "Use TikHub account search, then account profile. Confirm display name, gh_username, signature, certification or owning organization, and a canonical article before allowlisting.",
+  "accounts": [
+    {
+      "display_name": "医脉通",
+      "gh_username": null,
+      "status": "candidate_unverified",
+      "category": "professional_medical_media",
+      "specialties": ["general_clinical", "multiple_specialties"],
+      "query_hints": ["病例", "病例讨论", "罕见病"],
+      "evidence_role": "secondary_pointer"
+    },
+    {
+      "display_name": "丁香园",
+      "gh_username": null,
+      "status": "candidate_unverified",
+      "category": "professional_medical_media",
+      "specialties": ["general_clinical", "multiple_specialties"],
+      "query_hints": ["病例", "病例挑战", "临床推理"],
+      "evidence_role": "secondary_pointer"
+    },
+    {
+      "display_name": "医学界",
+      "gh_username": null,
+      "status": "candidate_unverified",
+      "category": "professional_medical_media",
+      "specialties": ["general_clinical", "multiple_specialties"],
+      "query_hints": ["病例", "诊疗", "误诊"],
+      "evidence_role": "secondary_pointer"
+    },
+    {
+      "display_name": "中国医学论坛报",
+      "gh_username": null,
+      "status": "candidate_unverified",
+      "category": "professional_medical_media",
+      "specialties": ["general_clinical", "multiple_specialties"],
+      "query_hints": ["病例", "病例解析", "指南"],
+      "evidence_role": "secondary_pointer"
+    },
+    {
+      "display_name": "NEJM医学前沿",
+      "gh_username": null,
+      "status": "candidate_unverified",
+      "category": "journal_affiliated_media",
+      "specialties": ["general_clinical", "multiple_specialties"],
+      "query_hints": ["病例", "病例挑战", "影像"],
+      "evidence_role": "secondary_pointer_to_journal"
+    },
+    {
+      "display_name": "悦读中医",
+      "gh_username": null,
+      "status": "candidate_unverified",
+      "category": "traditional_chinese_medicine_media",
+      "specialties": ["traditional_chinese_medicine"],
+      "query_hints": ["医案", "验案", "名医医案"],
+      "evidence_role": "secondary_pointer"
+    },
+    {
+      "display_name": "中医书友会",
+      "gh_username": null,
+      "status": "candidate_unverified",
+      "category": "traditional_chinese_medicine_media",
+      "specialties": ["traditional_chinese_medicine"],
+      "query_hints": ["医案", "经方", "辨证"],
+      "evidence_role": "secondary_pointer"
+    },
+    {
+      "display_name": "灵兰中医",
+      "gh_username": null,
+      "status": "candidate_unverified",
+      "category": "traditional_chinese_medicine_media",
+      "specialties": ["traditional_chinese_medicine"],
+      "query_hints": ["医案", "经方", "名医"],
+      "evidence_role": "secondary_pointer"
+    }
+  ]
+}

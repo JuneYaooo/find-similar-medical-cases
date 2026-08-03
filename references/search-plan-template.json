@@ -1,0 +1,99 @@
+{
+  "case_id": "deidentified-local-id",
+  "case_fingerprint": {
+    "specialty": "endocrinology",
+    "age_band": "young_adult",
+    "sex_if_relevant": "female",
+    "main_presentation": ["recurrent hypokalemia", "hypertension"],
+    "duration_and_course": "recurrent",
+    "key_positive_findings": ["metabolic alkalosis", "suppressed renin"],
+    "key_negative_findings": [],
+    "labs_imaging_pathology": ["elevated aldosterone"],
+    "suspected_or_confirmed_diagnosis": ["primary aldosteronism"],
+    "intervention": [],
+    "response_and_outcome": [],
+    "rare_or_discriminating_features": []
+  },
+  "requirements": {
+    "languages": ["en", "zh"],
+    "include_chinese_sources": true,
+    "include_wechat": true,
+    "citation_chaining": true
+  },
+  "api_queries": [
+    {
+      "id": "q1-high-precision",
+      "text": "recurrent hypokalemia hypertension metabolic alkalosis suppressed renin elevated aldosterone",
+      "intent": "high_precision",
+      "language": "en",
+      "sources": ["pubmed", "europepmc", "openalex"],
+      "case_filter": true,
+      "required": true,
+      "rationale": "Combine the most discriminating observed findings."
+    },
+    {
+      "id": "q2-presentation",
+      "text": "young woman recurrent hypokalemia hypertension",
+      "intent": "presentation",
+      "language": "en",
+      "sources": ["pubmed", "europepmc"],
+      "case_filter": true,
+      "required": true,
+      "rationale": "Search without assuming the final diagnosis."
+    },
+    {
+      "id": "q3-differential",
+      "text": "primary aldosteronism OR renal artery stenosis OR apparent mineralocorticoid excess hypokalemia hypertension",
+      "intent": "diagnosis_or_differential",
+      "language": "en",
+      "sources": ["pubmed", "europepmc"],
+      "case_filter": true,
+      "required": true,
+      "rationale": "Cover the leading diagnosis and meaningful alternatives."
+    },
+    {
+      "id": "q4-broad-synonyms",
+      "text": "hypokalaemia OR hypokalemia secondary hypertension mineralocorticoid",
+      "intent": "broad_synonyms",
+      "language": "en",
+      "sources": ["pubmed", "europepmc", "openalex"],
+      "case_filter": false,
+      "required": true,
+      "rationale": "Recover CPC, image, letter, and unindexed cases that lack a case-report label."
+    },
+    {
+      "id": "q5-tests",
+      "text": "aldosterone renin ratio adrenal imaging hypokalemia hypertension",
+      "intent": "test_or_pathology",
+      "language": "en",
+      "sources": ["pubmed", "europepmc"],
+      "case_filter": true,
+      "required": false,
+      "rationale": "Find cases described mainly through their diagnostic work-up."
+    }
+  ],
+  "browser_queries": [
+    {
+      "id": "b1-chinese-presentation",
+      "text": "青年女性 反复低钾 高血压 病例报告 个案报告 病例讨论",
+      "language": "zh",
+      "groups": ["chinese", "journals", "specialty"]
+    },
+    {
+      "id": "b2-chinese-diagnosis",
+      "text": "原发性醛固酮增多症 低钾 高血压 病例",
+      "language": "zh",
+      "groups": ["chinese", "journals"]
+    }
+  ],
+  "wechat_queries": [
+    {
+      "id": "w1-wechat-presentation",
+      "text": "反复低钾 高血压 病例",
+      "sort": "default",
+      "publish_time": "all",
+      "maximum_pages": 1,
+      "maximum_details": 5
+    }
+  ]
+}
