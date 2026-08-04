@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="500" viewBox="0 0 1440 500" role="img" aria-labelledby="title desc">
+  <title id="title">四步使用相似病例检索 Skill</title>
+  <desc id="desc">安装 Skill、告诉 AI 去标识化病例、AI 自动检索核验、阅读带来源的结果</desc>
+  <defs>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F7FBFA"/>
+      <stop offset="1" stop-color="#EEF7F5"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#21434B" flood-opacity=".10"/>
+    </filter>
+  </defs>
+  <rect width="1440" height="500" rx="28" fill="url(#panel)"/>
+  <g font-family="Inter,-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif">
+    <text x="720" y="62" text-anchor="middle" font-size="30" font-weight="760" fill="#173A47">不用懂检索语法，四步交给 AI</text>
+    <text x="720" y="94" text-anchor="middle" font-size="17" fill="#607981">你只需要说明想找什么，Skill 会约束 AI 按完整流程工作</text>
+
+    <g transform="translate(52 132)" filter="url(#shadow)">
+      <rect width="300" height="304" rx="24" fill="#FFFFFF"/>
+      <circle cx="40" cy="40" r="20" fill="#DDF5ED"/>
+      <text x="40" y="47" text-anchor="middle" font-size="18" font-weight="800" fill="#10816E">1</text>
+      <g transform="translate(88 66)">
+        <rect x="14" y="0" width="84" height="96" rx="14" fill="#EAF7F3" stroke="#A8DCCE" stroke-width="3"/>
+        <path d="M36 29h40M36 45h40M36 61h27" stroke="#168A75" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="92" cy="83" r="30" fill="#173A47"/>
+        <path d="M81 83l8 8 15-19" fill="none" stroke="#70E0C7" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <text x="150" y="196" text-anchor="middle" font-size="21" font-weight="740" fill="#173A47">请 AI 安装 Skill</text>
+      <text x="150" y="229" text-anchor="middle" font-size="15" fill="#647C84">把仓库链接发给 AI</text>
+      <text x="150" y="252" text-anchor="middle" font-size="15" fill="#647C84">让它帮你完成安装</text>
+    </g>
+
+    <path d="M367 284h34" stroke="#92BFB6" stroke-width="4" stroke-linecap="round"/>
+    <path d="M393 275l10 9-10 9" fill="none" stroke="#92BFB6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <g transform="translate(404 132)" filter="url(#shadow)">
+      <rect width="300" height="304" rx="24" fill="#FFFFFF"/>
+      <circle cx="40" cy="40" r="20" fill="#E2EEFF"/>
+      <text x="40" y="47" text-anchor="middle" font-size="18" font-weight="800" fill="#376DA8">2</text>
+      <g transform="translate(61 64)">
+        <rect width="178" height="96" rx="22" fill="#EAF2FF"/>
+        <path d="M34 96l-3 27 30-27" fill="#EAF2FF"/>
+        <circle cx="43" cy="40" r="7" fill="#4B7FB7"/>
+        <rect x="60" y="34" width="82" height="12" rx="6" fill="#7FA3CA"/>
+        <rect x="35" y="59" width="112" height="10" rx="5" fill="#A9C0D9"/>
+      </g>
+      <text x="150" y="196" text-anchor="middle" font-size="21" font-weight="740" fill="#173A47">描述要找的病例</text>
+      <text x="150" y="229" text-anchor="middle" font-size="15" fill="#647C84">只提供去标识化的表现</text>
+      <text x="150" y="252" text-anchor="middle" font-size="15" fill="#647C84">也可以说明语言和范围</text>
+    </g>
+
+    <path d="M719 284h34" stroke="#92BFB6" stroke-width="4" stroke-linecap="round"/>
+    <path d="M745 275l10 9-10 9" fill="none" stroke="#92BFB6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <g transform="translate(756 132)" filter="url(#shadow)">
+      <rect width="300" height="304" rx="24" fill="#FFFFFF"/>
+      <circle cx="40" cy="40" r="20" fill="#FFF0D3"/>
+      <text x="40" y="47" text-anchor="middle" font-size="18" font-weight="800" fill="#A66B00">3</text>
+      <g transform="translate(74 54)">
+        <circle cx="76" cy="62" r="48" fill="#173A47"/>
+        <circle cx="58" cy="51" r="7" fill="#65DCC3"/>
+        <circle cx="92" cy="41" r="7" fill="#8FB8EB"/>
+        <circle cx="96" cy="76" r="7" fill="#F2C268"/>
+        <path d="M65 49l20-6M64 57l25 15M93 48l2 20" stroke="#D9F8F1" stroke-width="3"/>
+        <path d="M111 97l38 38" stroke="#65DCC3" stroke-width="14" stroke-linecap="round"/>
+      </g>
+      <text x="150" y="196" text-anchor="middle" font-size="21" font-weight="740" fill="#173A47">AI 自动查找和核验</text>
+      <text x="150" y="229" text-anchor="middle" font-size="15" fill="#647C84">多种问法、多类来源</text>
+      <text x="150" y="252" text-anchor="middle" font-size="15" fill="#647C84">去重后继续追踪相关论文</text>
+    </g>
+
+    <path d="M1071 284h34" stroke="#92BFB6" stroke-width="4" stroke-linecap="round"/>
+    <path d="M1097 275l10 9-10 9" fill="none" stroke="#92BFB6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <g transform="translate(1108 132)" filter="url(#shadow)">
+      <rect width="280" height="304" rx="24" fill="#FFFFFF"/>
+      <circle cx="40" cy="40" r="20" fill="#E6F5F1"/>
+      <text x="40" y="47" text-anchor="middle" font-size="18" font-weight="800" fill="#10816E">4</text>
+      <g transform="translate(68 54)">
+        <rect width="144" height="112" rx="15" fill="#F4F9F8" stroke="#A9CEC5" stroke-width="3"/>
+        <rect x="18" y="19" width="76" height="12" rx="6" fill="#173A47"/>
+        <rect x="18" y="44" width="108" height="8" rx="4" fill="#A3BCBA"/>
+        <rect x="18" y="61" width="92" height="8" rx="4" fill="#C2D3D1"/>
+        <rect x="18" y="83" width="45" height="16" rx="8" fill="#CEF0E7"/>
+        <rect x="70" y="83" width="55" height="16" rx="8" fill="#E1EBF7"/>
+      </g>
+      <text x="140" y="196" text-anchor="middle" font-size="21" font-weight="740" fill="#173A47">阅读带来源的结果</text>
+      <text x="140" y="229" text-anchor="middle" font-size="15" fill="#647C84">看相同点、差异和未知项</text>
+      <text x="140" y="252" text-anchor="middle" font-size="15" fill="#647C84">也看哪些地方还没查到</text>
+    </g>
+  </g>
+</svg>

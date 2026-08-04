@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="720" viewBox="0 0 1440 720" role="img" aria-labelledby="title desc">
+  <title id="title">相似病例报告示意</title>
+  <desc id="desc">报告展示检索范围、最接近病例、相同点、重要差异、证据来源和剩余盲区</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#EDF7F5"/>
+      <stop offset="1" stop-color="#F7FAFC"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#173A47" flood-opacity=".12"/>
+    </filter>
+  </defs>
+  <rect width="1440" height="720" rx="28" fill="url(#bg)"/>
+  <g font-family="Inter,-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif">
+    <g transform="translate(64 48)" filter="url(#shadow)">
+      <rect width="1312" height="624" rx="26" fill="#FFFFFF"/>
+      <rect width="1312" height="76" rx="26" fill="#103747"/>
+      <rect y="50" width="1312" height="26" fill="#103747"/>
+      <circle cx="34" cy="38" r="7" fill="#FF8E87"/>
+      <circle cx="57" cy="38" r="7" fill="#F4C86D"/>
+      <circle cx="80" cy="38" r="7" fill="#67D7BD"/>
+      <text x="112" y="46" font-size="19" font-weight="700" fill="#FFFFFF">相似病例检索报告</text>
+      <rect x="1120" y="23" width="156" height="31" rx="15.5" fill="#1D5565"/>
+      <circle cx="1140" cy="38.5" r="5" fill="#67D7BD"/>
+      <text x="1154" y="44" font-size="13" font-weight="650" fill="#D9FAF2">来源已标记</text>
+
+      <g transform="translate(28 104)">
+        <rect width="308" height="174" rx="18" fill="#F5FAF9" stroke="#D8E9E5"/>
+        <text x="22" y="33" font-size="16" font-weight="740" fill="#173A47">这次查了哪些地方</text>
+        <g transform="translate(22 54)">
+          <circle cx="8" cy="8" r="8" fill="#CDEFE6"/>
+          <path d="M4 8l3 3 5-6" fill="none" stroke="#10816E" stroke-width="2.2" stroke-linecap="round"/>
+          <text x="27" y="13" font-size="14" fill="#526E76">英文医学论文</text>
+        </g>
+        <g transform="translate(22 85)">
+          <circle cx="8" cy="8" r="8" fill="#CDEFE6"/>
+          <path d="M4 8l3 3 5-6" fill="none" stroke="#10816E" stroke-width="2.2" stroke-linecap="round"/>
+          <text x="27" y="13" font-size="14" fill="#526E76">相关论文和引用关系</text>
+        </g>
+        <g transform="translate(22 116)">
+          <circle cx="8" cy="8" r="8" fill="#FFF0D4"/>
+          <text x="8" y="13" text-anchor="middle" font-size="13" font-weight="800" fill="#A66B00">!</text>
+          <text x="27" y="13" font-size="14" fill="#526E76">中文渠道：部分受访问限制</text>
+        </g>
+        <g transform="translate(22 147)">
+          <circle cx="8" cy="8" r="8" fill="#E7ECF2"/>
+          <text x="8" y="13" text-anchor="middle" font-size="12" font-weight="800" fill="#657B8E">—</text>
+          <text x="27" y="13" font-size="14" fill="#526E76">微信：本次未要求检索</text>
+        </g>
+      </g>
+
+      <g transform="translate(360 104)">
+        <rect width="924" height="174" rx="18" fill="#F7FBFF" stroke="#D9E5F1"/>
+        <rect x="20" y="20" width="94" height="26" rx="13" fill="#D9F3EB"/>
+        <text x="67" y="38" text-anchor="middle" font-size="12" font-weight="760" fill="#0F7766">最接近病例</text>
+        <text x="20" y="77" font-size="20" font-weight="750" fill="#173A47">病例标题会保留原文，并附年份和稳定链接</text>
+        <text x="20" y="106" font-size="14" fill="#5E7880">为什么相似：主要表现、关键检查和病程都接近</text>
+        <text x="20" y="132" font-size="14" fill="#5E7880">重要差异：年龄、既往病史或治疗背景不同</text>
+        <g transform="translate(682 23)">
+          <rect width="214" height="126" rx="15" fill="#FFFFFF" stroke="#D9E5F1"/>
+          <text x="16" y="27" font-size="13" font-weight="720" fill="#315A73">证据范围</text>
+          <rect x="16" y="43" width="72" height="23" rx="11.5" fill="#E1F5EF"/>
+          <text x="52" y="59" text-anchor="middle" font-size="11" font-weight="700" fill="#0F7766">论文摘要</text>
+          <rect x="95" y="43" width="80" height="23" rx="11.5" fill="#E8F0FA"/>
+          <text x="135" y="59" text-anchor="middle" font-size="11" font-weight="700" fill="#315A73">同行评议</text>
+          <text x="16" y="87" font-size="12" fill="#68818A">DOI / PMID</text>
+          <rect x="16" y="98" width="162" height="8" rx="4" fill="#C7D8E2"/>
+        </g>
+      </g>
+
+      <g transform="translate(28 302)">
+        <rect width="404" height="194" rx="18" fill="#F1FAF7" stroke="#D2EAE3"/>
+        <circle cx="31" cy="31" r="13" fill="#CDEFE6"/>
+        <path d="M25 31l4 4 8-10" fill="none" stroke="#10816E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="55" y="37" font-size="17" font-weight="740" fill="#173A47">相同点</text>
+        <g fill="#547078" font-size="14">
+          <circle cx="28" cy="74" r="4" fill="#35A88F"/><text x="43" y="79">主要症状和出现顺序</text>
+          <circle cx="28" cy="105" r="4" fill="#35A88F"/><text x="43" y="110">关键检查与病理线索</text>
+          <circle cx="28" cy="136" r="4" fill="#35A88F"/><text x="43" y="141">治疗后的变化和结局</text>
+          <circle cx="28" cy="167" r="4" fill="#35A88F"/><text x="43" y="172">罕见或有区分度的特征</text>
+        </g>
+      </g>
+
+      <g transform="translate(452 302)">
+        <rect width="404" height="194" rx="18" fill="#FFF9EF" stroke="#F0DFC0"/>
+        <circle cx="31" cy="31" r="13" fill="#FFE9BD"/>
+        <text x="31" y="37" text-anchor="middle" font-size="17" font-weight="800" fill="#A66B00">!</text>
+        <text x="55" y="37" font-size="17" font-weight="740" fill="#173A47">重要差异与未知</text>
+        <g fill="#6E6555" font-size="14">
+          <circle cx="28" cy="74" r="4" fill="#D89A22"/><text x="43" y="79">哪些特征明确不一致</text>
+          <circle cx="28" cy="105" r="4" fill="#D89A22"/><text x="43" y="110">原文没有报告哪些信息</text>
+          <circle cx="28" cy="136" r="4" fill="#D89A22"/><text x="43" y="141">只看摘要，还是检查了全文</text>
+          <circle cx="28" cy="167" r="4" fill="#D89A22"/><text x="43" y="172">推断和原文事实会分开写</text>
+        </g>
+      </g>
+
+      <g transform="translate(876 302)">
+        <rect width="408" height="194" rx="18" fill="#F5F7FA" stroke="#DDE4EA"/>
+        <circle cx="31" cy="31" r="13" fill="#E2EAF1"/>
+        <path d="M31 22v11M31 39v1" stroke="#526E83" stroke-width="3" stroke-linecap="round"/>
+        <text x="55" y="37" font-size="17" font-weight="740" fill="#173A47">还没覆盖的地方</text>
+        <g fill="#607683" font-size="14">
+          <circle cx="28" cy="74" r="4" fill="#8096A4"/><text x="43" y="79">付费或需要登录的数据库</text>
+          <circle cx="28" cy="105" r="4" fill="#8096A4"/><text x="43" y="110">无法访问的全文和封闭平台</text>
+          <circle cx="28" cy="136" r="4" fill="#8096A4"/><text x="43" y="141">检索失败或暂时不可用的来源</text>
+          <circle cx="28" cy="167" r="4" fill="#8096A4"/><text x="43" y="172">为什么现在停止继续查找</text>
+        </g>
+      </g>
+
+      <g transform="translate(28 522)">
+        <rect width="1256" height="72" rx="16" fill="#103747"/>
+        <circle cx="36" cy="36" r="18" fill="#1D5565"/>
+        <path d="M36 25v14M36 47v1" stroke="#78E2CC" stroke-width="4" stroke-linecap="round"/>
+        <text x="70" y="31" font-size="14" font-weight="720" fill="#E8FAF6">安全说明</text>
+        <text x="70" y="52" font-size="14" fill="#BBD7D4">病例相似只能帮助查资料，不能代替医生诊断、治疗判断或个体预后评估。</text>
+      </g>
+    </g>
+  </g>
+</svg>

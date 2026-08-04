@@ -1,267 +1,167 @@
-<div align="center">
+![Find Similar Medical Cases：让 AI 帮你查找、核验和比较相似医学病例](./assets/readme-cover.svg)
 
 # Find Similar Medical Cases
 
-**把相似医学病例检索做成可复现、可核验、有来源边界的 Agent Skill。**
+把一段**已经去除身份信息**的病例描述交给 AI，它会帮你查找相似病例、比较关键异同，并把来源与没有查到的范围一起说明。
 
-装进 Codex 后，可以直接用自然语言描述一个已经去标识化的临床表现，让 Agent 从 PubMed、Europe PMC、OpenAlex、Crossref、中文文献入口、专科病例库和可选微信渠道中检索、扩展、去重并比较相似病例。
+不要求你会写医学检索式，也不要求你会编程。你只需要用日常语言说明病例和你关心的问题。
 
 [![GitHub stars](https://img.shields.io/github/stars/JuneYaooo/find-similar-medical-cases?style=flat)](https://github.com/JuneYaooo/find-similar-medical-cases/stargazers)
 [![CI](https://github.com/JuneYaooo/find-similar-medical-cases/actions/workflows/ci.yml/badge.svg)](https://github.com/JuneYaooo/find-similar-medical-cases/actions/workflows/ci.yml)
-[![Agent Skill](https://img.shields.io/badge/Agent-Skill-orange.svg)](./SKILL.md)
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![Agent Skill](https://img.shields.io/badge/AI-Agent%20Skill-orange.svg)](./SKILL.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 
-</div>
+> **重要提醒：**这不是诊断或治疗工具。相似病例只能帮助回顾文献、形成待验证的临床假设，不能单独确定诊断、药物因果关系、治疗方案或个人预后。
 
-> **安全提示**：本项目不是诊断或治疗工具。相似病例只能用于文献回顾和生成临床假设，不能单独确定诊断、药物因果关系、治疗适用性或个体预后。发送外部查询前必须移除患者身份信息。
+## 最简单的使用方法
 
----
+### 第一步：让 AI 帮你安装
 
-## 能做什么
+打开支持 Skills 的 AI 助手，推荐使用 Codex。把下面这句话直接发给它：
 
-- **多路线检索**：把一个病例拆成高精度、表现优先、诊断/鉴别、宽泛同义词和检查/治疗等独立查询族。
-- **多来源发现**：默认查询 PubMed、Europe PMC 和 OpenAlex；按需用 Crossref 补充 DOI 与出版商元数据。
-- **相似与引文扩展**：对已验证种子执行 PubMed Similar Articles，以及 OpenAlex 参考文献、前向引用和相关文献扩展。
-- **中文与专科补漏**：生成 CNKI、万方、维普、SinoMed、CMCR、病例期刊和专科教学病例库的浏览器检索计划。
-- **可选微信检索**：支持用户提供的公众号文章、人工搜索，以及有明确费用上限的 TikHub 付费通道。
-- **跨来源去重**：联合 DOI、PMID、PMCID、标题、年份和第一作者；稳定标识冲突时不会仅凭同标题合并。
-- **病例级比较**：分开列出相同点、重要差异和未知信息，不把“疾病名称相同”直接当作临床相似。
-- **证据分层**：明确区分题录、摘要、可访问全文、本次实际检查的证据、教学病例和社会化来源。
-- **覆盖审计**：记录查询式、来源、时间、结果数、边际新增候选、失败原因、停止条件和剩余盲区。
+> 帮我安装 find-similar-medical-cases：https://github.com/JuneYaooo/find-similar-medical-cases
 
-## 适合哪些场景
+AI 确认安装完成后，重新打开一个对话，让新安装的能力生效。
 
-| 场景 | 适合程度 | 说明 |
-| --- | --- | --- |
-| 罕见病或非典型表现的相似病例检索 | 很适合 | 多查询族和引文扩展有助于减少单一关键词漏检。 |
-| 药物不良反应或治疗反应类病例 | 很适合 | 可加入药物、机制、检查和结局分支。 |
-| 影像、病理、眼科等专科教学病例 | 适合 | 可补充专科病例库，并与论文来源分开报告。 |
-| 中文病例报告、医案和病例讨论 | 适合 | 提供中文数据库与站点检索入口，访问权限需用户自行具备。 |
-| 微信公众号病例线索 | 有条件适合 | 作为二级发现来源，需追溯原始论文或机构来源。 |
-| 系统综述或正式循证评价 | 只能辅助 | 本 Skill 不替代注册方案、双人筛选、偏倚评价和正式系统综述流程。 |
-| 个人诊断、处方或治疗决策 | 不适合 | 病例相似性不能直接证明当前患者的诊断或治疗适用性。 |
+### 第二步：描述你要找的病例
 
-## 安装
+发送一段已经去除姓名、病历号、联系方式等身份信息的描述。例如：
 
-### 让 Agent 帮你安装
+> 用 find-similar-medical-cases 帮我找相似病例：成年患者使用泊沙康唑后出现高血压、低钾、代谢性碱中毒、低肾素和低醛固酮。
 
-把下面这段话发给 Codex：
+你不必一次把问题说得很完美。AI 会先整理关键表现，再根据缺失信息向你提问。
 
-```text
-帮我安装 find-similar-medical-cases skill：
-https://github.com/JuneYaooo/find-similar-medical-cases
-```
+![从安装到阅读结果的四步使用流程](./assets/how-to-use.svg)
 
-安装完成后，重新启动 Codex 或开启新会话，让 Skill 元数据重新加载。
+## 你可以这样问
 
-### 手动安装
+### 想找最接近的病例
 
-需要 Python 3.10 或更高版本。核心检索脚本只使用 Python 标准库。
+> 帮我找“青年女性、反复低钾、高血压、代谢性碱中毒”的相似病例。请按相似程度排序，并说明每篇病例像在哪里、不同在哪里。
 
-```bash
-mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
-git clone https://github.com/JuneYaooo/find-similar-medical-cases.git \
-  "${CODEX_HOME:-$HOME/.codex}/skills/find-similar-medical-cases"
-```
+### 不想让 AI 过早认定诊断
 
-如果已经克隆到其他目录，可以创建符号链接：
+> 先不要假设诊断。请同时检索可能表现为这组症状的不同疾病，并把支持和不支持每种可能性的病例分开。
 
-```bash
-ln -s /absolute/path/to/find-similar-medical-cases \
-  "${CODEX_HOME:-$HOME/.codex}/skills/find-similar-medical-cases"
-```
+### 想同时补充中文资料
 
-## 使用示例
+> 除了英文医学论文，再帮我补充中文病例报告和专科教学病例。请把不同类型的来源分开，不要混在一起。
 
-使用前先删除姓名、联系方式、病历号、精确地址、精确日期和不必要的罕见身份组合。
+### 已经找到一篇关键论文，想继续深挖
 
-```text
-用 find-similar-medical-cases 帮我找相似病例：
-成年患者使用泊沙康唑后出现高血压、低钾、代谢性碱中毒、低肾素和低醛固酮。
-```
+> 从这篇论文继续查它引用的文献、引用它的论文和相似文章，看看还能发现哪些更接近的病例：粘贴论文链接。
 
-```text
-帮我找“青年女性、反复低钾、高血压、代谢性碱中毒”的病例报告。
-不要先假设诊断，同时覆盖原发性醛固酮增多症、肾血管性高血压和表观盐皮质激素过多。
-```
+### 只想先快速了解
 
-```text
-找与这个罕见病理组合相似的病例，并从最接近的论文继续查参考文献、引用它的论文和 PubMed Similar Articles。
-```
+> 先做一次快速初步查找，给我最接近的结果，同时明确告诉我哪些来源还没有检查。不要把初步结果说成完整检索。
 
-```text
-除了英文论文，再补充中文病例报告和相关专科教学病例；把论文、教学病例和微信线索分开列出。
-```
+## 它会帮你做什么
 
-```text
-只做一个快速初筛，不要称为完整检索；告诉我哪些数据库还没有查。
-```
-
-## 它如何工作
-
-```text
-去标识化病例
-  → 病例指纹与多查询族
-  → PubMed / Europe PMC / OpenAlex / 可选 Crossref
-  → 中文、专科与可选微信补漏
-  → DOI / PMID / PMCID / 书目信息联合去重
-  → PubMed Similar + 引文图扩展
-  → 临床特征比较与证据核验
-  → 来源分层报告、覆盖审计和停止说明
-```
-
-项目不会把“搜到很多结果”写成“找到了所有病例”。未发表病例、数据库收录延迟、订阅限制、术语差异和封闭平台，使绝对完整性无法被证明。
-
-## 来源与能力边界
-
-| 来源 | 接入方式 | 默认使用 | 证据角色 |
-| --- | --- | ---: | --- |
-| PubMed | NCBI 官方 API | 是 | 医学文献主干、标识符和摘要核验。 |
-| Europe PMC | 官方 API | 是 | 医学文献主干、摘要和开放全文线索。 |
-| OpenAlex | 第三方学术 API | 是 | 广泛发现、引用和相关文献扩展，临床事实需回原始来源核验。 |
-| Crossref | 官方 DOI 元数据 API | 否 | DOI 与出版商元数据补充，不作为临床证据。 |
-| CNKI、万方、维普、SinoMed、CMCR | 浏览器或授权入口 | 按需 | 中文病例与题录发现，不绕过登录或订阅。 |
-| 专科病例库、病例期刊和出版商 | 浏览器 | 按需 | 原始论文或明确标注的教学病例。 |
-| 微信公众号 | 用户链接、人工搜索或 TikHub | 按需 | 二级线索；追溯原始来源后再支持临床事实。 |
-
-“实时查询”只表示请求时查询了来源当前索引，不代表索引没有出版延迟，也不代表可以发现未发表或不可访问的病例。
-
-## 输出内容
-
-一次完整报告应包含：
-
-1. 去标识化病例指纹和实际使用的查询变体。
-2. 每个来源的检索方式、时间、命中数、新增候选数、失败和访问限制。
-3. 最接近病例的标题、年份、标识符、链接、相似点、重要差异和证据范围。
-4. 论文、教学病例、中文题录和社会化来源的分组结果。
-5. 候选、重复、纳入、近似但不匹配和排除数量。
-6. 停止原因、未检索渠道、全文缺失和其他不确定性。
-7. 关键临床陈述对应的 claim-to-source 证据账本。
-8. 医疗安全说明。
-
-`clinical_similarity`、`retrieval_confidence`、`source_quality` 和 `citation_support` 始终分开，不合并成一个含义不清的总分。
-
-<details>
-<summary><strong>命令行高级使用</strong></summary>
-
-### 综合检索计划
-
-复制模板并替换为去标识化事实：
-
-```bash
-cp references/search-plan-template.json /tmp/case-search-plan.json
-python3 scripts/run_search_plan.py \
-  --plan /tmp/case-search-plan.json \
-  --mode comprehensive \
-  --limit 20 \
-  --max-api-searches 30 \
-  --workers 4 \
-  --pretty
-```
-
-### 快速单查询
-
-```bash
-python3 scripts/search_cases.py \
-  --query 'de-identified English clinical concepts' \
-  --sources pubmed,europepmc,openalex \
-  --limit 10 \
-  --pretty
-```
-
-Crossref 为可选元数据来源：
-
-```bash
-python3 scripts/search_cases.py \
-  --query 'rare disease presentation' \
-  --sources crossref \
-  --limit 10 \
-  --pretty
-```
-
-### 扩展已验证种子
-
-```bash
-python3 scripts/expand_related_cases.py \
-  --doi '10.xxxx/xxxxx' \
-  --providers pubmed,openalex \
-  --directions related,references,citations \
-  --limit-per-direction 20 \
-  --pretty
-```
-
-### 生成浏览器补漏计划
-
-```bash
-python3 scripts/build_browser_searches.py \
-  --query '去标识化中文关键词' \
-  --pretty
-```
-
-### TikHub 费用预览
-
-```bash
-python3 scripts/search_wechat_tikhub.py \
-  --dry-run \
-  --max-calls 6 \
-  --pretty \
-  collect \
-  --query '去标识化关键词' \
-  --pages 1 \
-  --details 5
-```
-
-只有在确认当前价格、获得付费检索授权并设置 `TIKHUB_API_KEY` 后，才移除 `--dry-run`。
-
-</details>
-
-## 可选环境变量
-
-| 变量 | 用途 |
+| 你关心的问题 | AI 会怎么处理 |
 | --- | --- |
-| `NCBI_EMAIL` | NCBI 负责任使用标识。 |
-| `NCBI_API_KEY` | 提高 NCBI 速率额度。 |
-| `OPENALEX_EMAIL` | OpenAlex polite-pool 标识（服务支持时）。 |
-| `OPENALEX_API_KEY` | OpenAlex 当前政策要求时使用。 |
-| `CROSSREF_EMAIL` | Crossref polite-pool 标识。 |
-| `TIKHUB_API_KEY` | TikHub 付费调用，只从环境读取。 |
-| `TIKHUB_BASE_URL` | TikHub API 区域端点。 |
+| 有没有相似病例？ | 从症状、检查、用药、时间关系、诊断和治疗反应等多个角度寻找，不只搜索一个疾病名称。 |
+| 病例到底像在哪里？ | 分别列出相同点、重要差异和原文没有提供的信息。 |
+| 一篇关键论文之后还有什么？ | 沿着相似文章、参考文献和后续引用继续查找。 |
+| 中文或专科病例会不会漏掉？ | 按需补充中文病例库、病例期刊和专科教学资源。 |
+| 同一篇文章会不会重复出现？ | 识别不同来源里的重复记录，并保留更完整、可核验的版本。 |
+| 结果可靠吗？ | 区分只看到标题、读到摘要、能够查看全文和实际核验过的内容。 |
+| 到底查了多少地方？ | 说明已经检查的来源、受限或失败的来源、停止原因和剩余盲区。 |
 
-不要把 API Key 放进 prompt、命令参数、查询计划、Git 提交、Issue 或日志。
+## 一份结果大概长这样
 
-## 项目验证
+AI 给出的不应该只是一串论文标题。它还会解释检索覆盖、相似依据、证据范围和未知信息。
 
-```bash
-python3 scripts/validate_project.py
-python3 -m unittest discover -s tests -v
-```
+![相似医学病例报告示意图](./assets/report-preview.svg)
 
-项目验证器会检查 Skill frontmatter、目录名、`agents/openai.yaml`、相对链接、JSON 和 Python 语法。GitHub Actions 会在 Python 3.10 和 3.13 上运行格式检查、项目验证、单元测试和命令入口检查。测试不会调用付费服务。
+通常会包括：
 
-## 项目结构
+- **病例摘要**：只保留与检索有关、已经去除身份信息的临床特征。
+- **最接近的病例**：标题、年份、可访问的来源链接以及为什么相似。
+- **相同点与差异**：症状、检查、暴露、病程、治疗和结局分别比较。
+- **证据范围**：哪些结论来自题目、摘要或全文，哪些只是待核验线索。
+- **检索覆盖**：查过哪里、哪里访问受限、还有哪些来源没有查。
+- **安全说明**：提醒结果不能替代医生判断或正式的循证评价。
 
-```text
-find-similar-medical-cases/
-├── SKILL.md                         # Agent 工作流与输出契约
-├── agents/openai.yaml               # Codex 展示与默认调用提示
-├── references/                      # 来源路由、检索协议、架构和查询模板
-├── scripts/                         # 检索、扩展、浏览器计划、微信连接器和验证器
-├── tests/                           # 无付费调用的自动化回归测试
-└── .github/workflows/ci.yml         # Python 3.10 / 3.13 CI
-```
+## 怎么判断结果是否值得继续看
 
-完整工作流见 [SKILL.md](./SKILL.md)，来源路由见 [references/sources.md](./references/sources.md)，架构边界见 [references/technical-architecture.md](./references/technical-architecture.md)。
+先看来源链接是否能够追溯到原始论文或机构页面，再看 AI 是否明确写出了病例的相同点、差异和未知信息。
 
-## 安全与隐私
+一个可信的结果应该同时回答四件事：
 
-- 外部检索前必须去除姓名、电话、邮箱、身份证件、病历号、精确地址和精确日期。
-- 不要直接把未去标识化病历、住院记录或检查单粘贴进查询。
-- API 或网页失败必须显示为失败、受限或未检索，不能改写成“0 个病例”。
-- 不绕过登录、订阅、CAPTCHA、robots 规则或平台访问控制。
-- 可访问全文不等于本次已经检查全文，也不等于拥有复制或再发布许可。
-- 真实患者的诊断和治疗必须由合格医疗专业人员结合完整病史、检查和当地规范判断。
+1. **为什么找到它**：哪些临床特征真正相似。
+2. **证据看到哪里**：只看到题目、读了摘要，还是核验了全文。
+3. **哪里不一样**：年龄、病程、检查、用药或结局有哪些关键差异。
+4. **还有什么没查**：哪些数据库、全文或封闭来源本次无法覆盖。
 
-## 许可证
+如果结果只给出一个“相似度分数”，却没有解释依据和来源，不建议直接采信。
 
-[MIT License](./LICENSE)
+## 它会从哪里找
+
+- **英文医学文献**：以 PubMed 和 Europe PMC 等医学来源为主。
+- **开放学术资料**：用于扩大候选范围，并发现相关论文之间的引用关系。
+- **中文病例资料**：按需查找中国知网、万方、维普、SinoMed、CMCR 等入口。
+- **专科资源**：补充影像、病理、眼科等领域的病例期刊与教学病例。
+- **可选的微信线索**：只作为发现线索，重要临床陈述仍需回到原始论文或机构来源核验。
+
+部分中文数据库、出版商全文和封闭平台可能需要登录、机构订阅或单独授权。本项目不会绕过这些限制，也不会把“无法访问”写成“没有结果”。任何可能产生费用的查询，都应该先得到你的明确同意。
+
+## 适合与不适合的场景
+
+| 适合 | 不适合 |
+| --- | --- |
+| 罕见病或非典型表现的病例回顾 | 根据相似病例自行诊断 |
+| 药物不良反应和特殊治疗反应 | 直接决定用药或治疗方案 |
+| 影像、病理等少见组合的文献查找 | 预测某位患者的个人结局 |
+| 为病例讨论或科研寻找线索 | 替代医生、药师或多学科团队判断 |
+| 从关键论文继续追踪相似研究 | 替代正式系统综述的双人筛选和质量评价 |
+
+## 常见问题
+
+### 我完全不懂编程，可以用吗？
+
+可以。安装和使用都可以通过和 AI 对话完成。你只需要提供仓库链接，并用自然语言描述已经去除身份信息的病例。
+
+### 我应该提供多少病例信息？
+
+优先提供与问题有关的年龄范围、主要表现、关键检查、用药或暴露、时间顺序、治疗反应和结局。不要提供能识别患者身份的内容。
+
+### 它能保证找到所有相似病例吗？
+
+不能。未发表病例、数据库收录延迟、语言差异、订阅限制和封闭平台都会造成遗漏。项目会尽量扩大覆盖，同时诚实报告没有检查或无法访问的范围。
+
+### 为什么 AI 有时会继续问我问题？
+
+年龄、症状出现顺序、关键阴性检查或药物暴露时间，可能直接改变检索方向。补充这些信息通常能减少看似相关但临床上并不相似的结果。
+
+### 中文病例也能查吗？
+
+可以，但部分中文来源需要你自己的账号或机构权限。AI 应该把已核验内容、只有题录的线索和无法访问的内容分别标明。
+
+### 会产生费用吗？
+
+核心的公开文献查找通常不需要额外费用。订阅全文、封闭数据库或可选的第三方来源可能收费；AI 不应在没有说明费用和获得你同意的情况下使用付费渠道。
+
+### 找到的结果可以直接用于医疗决策吗？
+
+不可以。病例报告容易受到选择性发表、信息缺失和偶然性的影响。结果应由具备相应资质的专业人员结合指南、更高等级证据和患者实际情况判断。
+
+## 隐私与医疗安全
+
+在把病例发送给任何 AI 或外部检索来源之前，请删除：
+
+- 姓名、电话、邮箱、身份证件和病历号。
+- 精确住址、精确就诊日期和其他可定位个人的信息。
+- 面部照片、带身份信息的检查单或完整病历截图。
+- 不必要且可能组合识别患者的罕见个人特征。
+
+尽量只提供检索所必需的临床事实。即使病例已经去除身份信息，也应遵守所在机构的隐私、伦理和数据管理要求。
+
+## 进一步了解
+
+如果你希望了解项目如何组织检索、区分来源和约束输出，可以阅读：
+
+- [完整工作方式](./SKILL.md)
+- [信息来源与使用边界](./references/sources.md)
+- [检索质量与停止条件](./references/retrieval-workflow.md)
+
+本项目采用 [MIT License](./LICENSE) 开源。
