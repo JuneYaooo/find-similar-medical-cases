@@ -5,13 +5,17 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor
+import html
 import json
+import re
 import sys
 import threading
+import unicodedata
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import search_cases as sc
+import write_search_bundle as wsb
 
 
 ALLOWED_INTENTS = {
@@ -31,6 +35,7 @@ CORE_INTENTS = {
     "broad_synonyms",
 }
 BROWSER_GROUPS = {"chinese", "journals", "specialty", "wechat"}
+EVIDENCE_FIELDS = {"title", "abstract", "journal", "publication_types"}
 
 
 class PlanError(RuntimeError):
@@ -49,6 +54,155 @@ def load_plan(path: str) -> Dict[str, Any]:
     if not isinstance(value, dict):
         raise PlanError("search plan must be a JSON object")
     return value
+
+
+def normalize_string_list(value: Any, location: str) -> List[str]:
+    if not isinstance(value, list) or not value:
+        raise PlanError(f"{location} must be a non-empty array")
+    normalized: List[str] = []
+    for index, item in enumerate(value):
+        if not isinstance(item, str) or not (term := sc.compact(item)):
+            raise PlanError(f"{location}[{index}] must be a non-empty string")
+        sensitive = sc.detect_sensitive_query(term)
+        if sensitive:
+            raise PlanError(
+                f"{location}[{index}] may contain sensitive identifiers: "
+                + ", ".join(sensitive)
+            )
+        if term not in normalized:
+            normalized.append(term)
+    return normalized
+
+
+def normalize_concept_groups(value: Any, location: str) -> List[List[str]]:
+    if not isinstance(value, list) or not value:
+        raise PlanError(f"{location} must be a non-empty array of term arrays")
+    return [
+        normalize_string_list(group, f"{location}[{index}]")
+        for index, group in enumerate(value)
+    ]
+
+
+def compile_concept_groups(groups: List[List[str]]) -> str:
+    """Compile provider-neutral AND-of-OR groups without medical assumptions."""
+
+    rendered_groups = []
+    for group in groups:
+        alternatives = " OR ".join(f"({term})" for term in group)
+        rendered_groups.append(f"({alternatives})")
+    return " AND ".join(rendered_groups)
+
+
+def validate_candidate_features(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
+    values = plan.get("candidate_features", [])
+    if values is None:
+        values = []
+    if not isinstance(values, list):
+        raise PlanError("candidate_features must be an array")
+    seen: Set[str] = set()
+    normalized: List[Dict[str, Any]] = []
+    for index, value in enumerate(values):
+        location = f"candidate_features[{index}]"
+        if not isinstance(value, dict):
+            raise PlanError(f"{location} must be an object")
+        feature_id = sc.compact(value.get("id"))
+        if not feature_id or feature_id in seen:
+            raise PlanError(f"{location}.id must be unique and non-empty")
+        label = sc.compact(value.get("label")) or feature_id
+        terms = normalize_string_list(value.get("terms"), f"{location}.terms")
+        mismatch_terms = value.get("mismatch_terms") or []
+        if not isinstance(mismatch_terms, list):
+            raise PlanError(f"{location}.mismatch_terms must be an array")
+        if mismatch_terms:
+            mismatch_terms = normalize_string_list(
+                mismatch_terms, f"{location}.mismatch_terms"
+            )
+        weight = value.get("weight", 1)
+        if (
+            isinstance(weight, bool)
+            or not isinstance(weight, (int, float))
+            or weight <= 0
+        ):
+            raise PlanError(f"{location}.weight must be a positive number")
+        required = value.get("required", False)
+        if not isinstance(required, bool):
+            raise PlanError(f"{location}.required must be true or false")
+        fields = value.get("fields") or ["title", "abstract"]
+        if not isinstance(fields, list) or not fields or not all(
+            isinstance(field, str) and field.strip() for field in fields
+        ):
+            raise PlanError(f"{location}.fields must be a non-empty string array")
+        fields = list(dict.fromkeys(field.strip() for field in fields))
+        unknown_fields = sorted(set(fields) - EVIDENCE_FIELDS)
+        if unknown_fields:
+            raise PlanError(
+                f"{location}.fields contains unsupported values: "
+                + ", ".join(unknown_fields)
+            )
+        overlap = {
+            normalize_evidence_text(term) for term in terms
+        } & {normalize_evidence_text(term) for term in mismatch_terms}
+        if overlap:
+            raise PlanError(
+                f"{location} uses the same term as matching and mismatching evidence"
+            )
+        seen.add(feature_id)
+        normalized.append(
+            {
+                "id": feature_id,
+                "label": label,
+                "terms": terms,
+                "mismatch_terms": mismatch_terms,
+                "weight": float(weight),
+                "required": required,
+                "fields": fields,
+            }
+        )
+    return normalized
+
+
+def validate_selection_policy(plan: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalize a case-local verified-case reporting policy.
+
+    This policy never limits retrieval or document triage.  Its optional limit
+    applies only after patient-level verification and deduplication.
+    """
+
+    value = plan.get("selection_policy")
+    if value is None:
+        value = {}
+    if not isinstance(value, dict):
+        raise PlanError("selection_policy must be an object")
+    detailed_limit = value.get("max_detailed_verified_cases")
+    if detailed_limit is not None and (
+        isinstance(detailed_limit, bool)
+        or not isinstance(detailed_limit, int)
+        or detailed_limit < 1
+    ):
+        raise PlanError(
+            "selection_policy.max_detailed_verified_cases must be a positive integer or null"
+        )
+    dimensions = value.get("ranking_dimensions")
+    if dimensions is None:
+        dimensions = []
+    if not isinstance(dimensions, list):
+        raise PlanError("selection_policy.ranking_dimensions must be an array")
+    if dimensions:
+        dimensions = normalize_string_list(
+            dimensions, "selection_policy.ranking_dimensions"
+        )
+    return {
+        "retrieval_policy": "maximize_recall_until_stopping_rule",
+        "eligibility_scope": "patient_level_verified_close_cases",
+        "max_detailed_verified_cases": detailed_limit,
+        "retain_all_eligible_cases": True,
+        "overflow_destination": "supplement_and_machine_results",
+        "ranking_dimensions": dimensions,
+        "notice": (
+            "The optional limit controls detailed presentation only. It does not "
+            "cap retrieval, screening, verification, or the total eligible-case count."
+        ),
+    }
 
 
 def validate_plan(plan: Dict[str, Any], mode: str) -> List[Dict[str, Any]]:
@@ -77,9 +231,19 @@ def validate_plan(plan: Dict[str, Any], mode: str) -> List[Dict[str, Any]]:
     for index, query in enumerate(queries):
         if not isinstance(query, dict):
             raise PlanError(f"api_queries[{index}] must be an object")
-        for field in ("id", "text", "intent"):
+        for field in ("id", "intent"):
             if not isinstance(query.get(field), str):
                 raise PlanError(f"api_queries[{index}].{field} must be a string")
+        has_text = "text" in query and query.get("text") is not None
+        has_groups = (
+            "concept_groups" in query and query.get("concept_groups") is not None
+        )
+        if has_text == has_groups:
+            raise PlanError(
+                f"api_queries[{index}] must define exactly one of text or concept_groups"
+            )
+        if has_text and not isinstance(query.get("text"), str):
+            raise PlanError(f"api_queries[{index}].text must be a string")
         if "language" in query and not isinstance(query["language"], str):
             raise PlanError(f"api_queries[{index}].language must be a string")
         if (
@@ -93,7 +257,16 @@ def validate_plan(plan: Dict[str, Any], mode: str) -> List[Dict[str, Any]]:
         if "case_filter" in query and not isinstance(query["case_filter"], bool):
             raise PlanError(f"api_queries[{index}].case_filter must be true or false")
         query_id = sc.compact(query.get("id"))
-        text = sc.compact(query.get("text"))
+        concept_groups: List[List[str]] = []
+        if has_groups:
+            concept_groups = normalize_concept_groups(
+                query.get("concept_groups"), f"api_queries[{index}].concept_groups"
+            )
+            text = compile_concept_groups(concept_groups)
+            query_representation = "concept_groups"
+        else:
+            text = sc.compact(query.get("text"))
+            query_representation = "legacy_text"
         intent = sc.compact(query.get("intent"))
         language = sc.compact(query.get("language")) or "en"
         if not query_id or query_id in seen:
@@ -127,6 +300,8 @@ def validate_plan(plan: Dict[str, Any], mode: str) -> List[Dict[str, Any]]:
             {
                 "id": query_id,
                 "text": text,
+                "concept_groups": concept_groups,
+                "query_representation": query_representation,
                 "intent": intent,
                 "language": language,
                 "sources": sources,
@@ -294,7 +469,270 @@ def tag_record(record: Dict[str, Any], query: Dict[str, Any]) -> Dict[str, Any]:
     return tagged
 
 
-def annotate_candidate(record: Dict[str, Any]) -> None:
+def normalize_evidence_text(value: Any) -> str:
+    if isinstance(value, list):
+        value = " ".join(str(item) for item in value)
+    cleaned = sc.clean_markup(html.unescape(str(value or ""))) or ""
+    return unicodedata.normalize("NFKC", cleaned).casefold()
+
+
+def contains_evidence_term(text: str, term: str) -> bool:
+    normalized_term = normalize_evidence_text(term)
+    if not normalized_term:
+        return False
+    if normalized_term[0].isascii() and normalized_term[0].isalnum():
+        prefix = r"(?<![A-Za-z0-9])"
+    else:
+        prefix = ""
+    if normalized_term[-1].isascii() and normalized_term[-1].isalnum():
+        suffix = r"(?![A-Za-z0-9])"
+    else:
+        suffix = ""
+    return bool(re.search(prefix + re.escape(normalized_term) + suffix, text))
+
+
+def first_feature_evidence(
+    field_text: Dict[str, str], terms: List[str], fields: List[str]
+) -> Optional[Dict[str, str]]:
+    for term in terms:
+        for field in fields:
+            if contains_evidence_term(field_text.get(field, ""), term):
+                return {"term": term, "field": field}
+    return None
+
+
+def annotate_feature_evidence(
+    record: Dict[str, Any], features: List[Dict[str, Any]]
+) -> None:
+    if not features:
+        return
+    field_text = {
+        field: normalize_evidence_text(record.get(field)) for field in EVIDENCE_FIELDS
+    }
+    details: List[Dict[str, Any]] = []
+    matched_weight = 0.0
+    mismatched_weight = 0.0
+    required_matched_weight = 0.0
+    required_total_weight = 0.0
+    status_counts = {"matched": 0, "mismatched": 0, "conflicting": 0, "unknown": 0}
+    for feature in features:
+        match = first_feature_evidence(
+            field_text, feature["terms"], feature["fields"]
+        )
+        mismatch = first_feature_evidence(
+            field_text, feature["mismatch_terms"], feature["fields"]
+        )
+        if match and mismatch:
+            status = "conflicting"
+        elif match:
+            status = "matched"
+        elif mismatch:
+            status = "mismatched"
+        else:
+            status = "unknown"
+        status_counts[status] += 1
+        if match:
+            matched_weight += feature["weight"]
+            if feature["required"]:
+                required_matched_weight += feature["weight"]
+        if mismatch:
+            mismatched_weight += feature["weight"]
+        if feature["required"]:
+            required_total_weight += feature["weight"]
+        evidence = []
+        if match:
+            evidence.append({"kind": "match", **match})
+        if mismatch:
+            evidence.append({"kind": "mismatch", **mismatch})
+        details.append(
+            {
+                "id": feature["id"],
+                "label": feature["label"],
+                "weight": feature["weight"],
+                "required": feature["required"],
+                "status": status,
+                "evidence": evidence,
+            }
+        )
+    total_weight = sum(feature["weight"] for feature in features)
+    record["feature_evidence"] = {
+        "method": "plan_defined_term_evidence",
+        "notice": (
+            "This is document-level triage from configured terms, not validated "
+            "clinical similarity. Missing text is unknown, not a clinical mismatch."
+        ),
+        "matched_weight": matched_weight,
+        "mismatched_weight": mismatched_weight,
+        "total_weight": total_weight,
+        "evidence_match_percent": round(100 * matched_weight / total_weight, 2),
+        "required_matched_weight": required_matched_weight,
+        "required_total_weight": required_total_weight,
+        "required_evidence_match_percent": (
+            round(100 * required_matched_weight / required_total_weight, 2)
+            if required_total_weight
+            else None
+        ),
+        "status_counts": status_counts,
+        "features": details,
+    }
+
+
+def candidate_sort_key(
+    record: Dict[str, Any], use_feature_evidence: bool
+) -> Tuple[Any, ...]:
+    retrieval = record["retrieval_support"]
+    retrieval_key = (
+        {"high": 2, "medium": 1, "discovery_only": 0}[
+            retrieval["retrieval_confidence"]
+        ],
+        retrieval["matched_intent_count"],
+        retrieval["matched_query_count"],
+        record.get("year") or 0,
+    )
+    if not use_feature_evidence:
+        return retrieval_key
+    evidence = record["feature_evidence"]
+    required_percent = evidence["required_evidence_match_percent"]
+    return (
+        required_percent if required_percent is not None else -1,
+        evidence["evidence_match_percent"],
+        -evidence["mismatched_weight"],
+        *retrieval_key,
+    )
+
+
+def count_with_items(items: Set[str]) -> Dict[str, Any]:
+    values = sorted(items)
+    return {"count": len(values), "items": values}
+
+
+def summarize_dimensions(
+    records: List[Dict[str, Any]], features: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    dimensions = []
+    for priority_order, feature in enumerate(features, start=1):
+        counts = {"matched": 0, "mismatched": 0, "conflicting": 0, "unknown": 0}
+        for record in records:
+            feature_details = {
+                detail["id"]: detail
+                for detail in (record.get("feature_evidence") or {}).get(
+                    "features", []
+                )
+            }
+            status = (feature_details.get(feature["id"]) or {}).get(
+                "status", "unknown"
+            )
+            counts[status] += 1
+        dimensions.append(
+            {
+                "priority_order": priority_order,
+                "id": feature["id"],
+                "label": feature["label"],
+                "weight": feature["weight"],
+                "required": feature["required"],
+                "candidate_status_counts": counts,
+            }
+        )
+    return {
+        "configured_dimension_count": len(features),
+        "dimensions": dimensions,
+        "notice": (
+            "Counts describe configured term evidence in retrieved documents. "
+            "They do not count verified patients or establish clinical similarity."
+        ),
+    }
+
+
+def build_result_accounting(
+    queries: List[Dict[str, Any]],
+    coverage: List[Dict[str, Any]],
+    records: List[Dict[str, Any]],
+    features: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    planned_families = {query["intent"] for query in queries}
+    attempted_families = {item["intent"] for item in coverage}
+    successful_families = {
+        item["intent"] for item in coverage if item["status"] == "success"
+    }
+    fully_successful_families = set()
+    for intent in planned_families:
+        intent_executions = [
+            item for item in coverage if item["intent"] == intent
+        ]
+        if intent_executions and all(
+            item["status"] == "success" for item in intent_executions
+        ):
+            fully_successful_families.add(intent)
+    supported_sources = {
+        f"{source}:{sc.SOURCE_CLASSES[source][0]}" for source in sc.SUPPORTED_SOURCES
+    }
+    planned_sources = {source for query in queries for source in query["sources"]}
+    attempted_sources = {item["source_key"] for item in coverage}
+    successful_sources = {
+        item["source_key"] for item in coverage if item["status"] == "success"
+    }
+    raw_returned = sum(int(item.get("returned") or 0) for item in coverage)
+    reported_hits = sum(
+        int(item.get("total_hits") or 0)
+        for item in coverage
+        if item["status"] == "success"
+    )
+    succeeded_executions = sum(item["status"] == "success" for item in coverage)
+    failed_executions = len(coverage) - succeeded_executions
+    return {
+        "scope": "live_api_stage",
+        "query_families": {
+            "supported": count_with_items(set(ALLOWED_INTENTS)),
+            "planned": count_with_items(planned_families),
+            "attempted": count_with_items(attempted_families),
+            "succeeded_on_at_least_one_source": count_with_items(
+                successful_families
+            ),
+            "succeeded_on_all_planned_sources": count_with_items(
+                fully_successful_families
+            ),
+        },
+        "source_routes": {
+            "supported": count_with_items(supported_sources),
+            "planned": count_with_items(planned_sources),
+            "attempted": count_with_items(attempted_sources),
+            "usable_this_run": count_with_items(successful_sources),
+        },
+        "query_source_executions": {
+            "planned": len(coverage),
+            "attempted": len(coverage),
+            "succeeded": succeeded_executions,
+            "failed": failed_executions,
+        },
+        "candidate_funnel": {
+            "provider_reported_hits_sum": reported_hits,
+            "returned_records_before_deduplication": raw_returned,
+            "duplicate_record_occurrences_removed": max(
+                0, raw_returned - len(records)
+            ),
+            "unique_candidates_after_deduplication": len(records),
+            "document_triaged_candidates": len(records) if features else 0,
+            "ranked_candidates": len(records),
+            "clinically_verified_patient_cases": None,
+            "included_close_cases": None,
+            "detailed_included_cases": None,
+            "additional_included_cases_retained": None,
+            "near_misses": None,
+            "excluded_after_verification": None,
+        },
+        "dimension_summary": summarize_dimensions(records, features),
+        "notices": [
+            "Provider-reported hit totals overlap across queries and sources and are not unique cases.",
+            "Returned records and deduplicated candidates are publications or index records, not verified patient counts.",
+            "Complete the null verification fields only after source-level and patient-level review.",
+            "Browser, subscription, Chinese, specialty, citation-expansion, and social routes require separate accounting when used.",
+        ],
+    }
+
+
+def annotate_candidate(
+    record: Dict[str, Any], features: Optional[List[Dict[str, Any]]] = None
+) -> None:
     publication_types = " ".join(record.get("publication_types", [])).casefold()
     title_abstract = " ".join(
         filter(None, [record.get("title"), record.get("abstract")])
@@ -324,6 +762,7 @@ def annotate_candidate(record: Dict[str, Any]) -> None:
         "matched_query_count": query_count,
         "matched_intent_count": intent_count,
     }
+    annotate_feature_evidence(record, features or [])
 
 
 def protocol_audit(
@@ -345,6 +784,16 @@ def protocol_audit(
     requirements = plan.get("requirements") or {}
     missing: List[str] = []
     warnings: List[str] = []
+    legacy_queries = [
+        query
+        for query in queries
+        if query.get("query_representation") == "legacy_text"
+    ]
+    if legacy_queries:
+        warnings.append(
+            f"{len(legacy_queries)} API queries use legacy free text; "
+            "Boolean grouping was not structurally compiled"
+        )
     if mode == "comprehensive":
         for intent in sorted(CORE_INTENTS - intents):
             missing.append(f"missing API query intent: {intent}")
@@ -442,6 +891,14 @@ def main() -> int:
         help="Parallel source workers; PubMed remains serialized",
     )
     parser.add_argument("--pretty", action="store_true")
+    parser.add_argument(
+        "--output-root",
+        help="Write search-report.md, search-results.json, and case files below this directory",
+    )
+    parser.add_argument(
+        "--output-label",
+        help="De-identified brief used in the timestamped output directory name",
+    )
     args = parser.parse_args()
     if not 1 <= args.limit <= 50:
         parser.error("--limit must be between 1 and 50")
@@ -451,10 +908,21 @@ def main() -> int:
         parser.error("--workers must be between 1 and 8")
     if not 1 <= args.timeout <= 300:
         parser.error("--timeout must be between 1 and 300 seconds")
+    if args.output_label and not args.output_root:
+        parser.error("--output-label requires --output-root")
+    if args.output_label:
+        sensitive_label = sc.detect_sensitive_query(args.output_label)
+        if sensitive_label:
+            parser.error(
+                "--output-label may contain sensitive identifiers: "
+                + ", ".join(sensitive_label)
+            )
 
     try:
         plan = load_plan(args.plan)
         queries = validate_plan(plan, args.mode)
+        candidate_features = validate_candidate_features(plan)
+        selection_policy = validate_selection_policy(plan)
         validate_supplemental_queries(plan)
         scheduled = sum(len(query["sources"]) for query in queries)
         if scheduled > args.max_api_searches:
@@ -493,6 +961,8 @@ def main() -> int:
                 "retrieval_method": retrieval_method,
                 "required": query["required"],
                 "case_filter": query["case_filter"],
+                "query_representation": query["query_representation"],
+                "concept_groups": query["concept_groups"] or None,
                 "status": "failed",
                 "retrieved_at": retrieved_at,
                 "effective_query": None,
@@ -548,16 +1018,9 @@ def main() -> int:
 
     records = merge_with_aliases(raw_records)
     for record in records:
-        annotate_candidate(record)
+        annotate_candidate(record, candidate_features)
     records.sort(
-        key=lambda record: (
-            {"high": 2, "medium": 1, "discovery_only": 0}[
-                record["retrieval_support"]["retrieval_confidence"]
-            ],
-            record["retrieval_support"]["matched_intent_count"],
-            record["retrieval_support"]["matched_query_count"],
-            record.get("year") or 0,
-        ),
+        key=lambda record: candidate_sort_key(record, bool(candidate_features)),
         reverse=True,
     )
     output = {
@@ -567,17 +1030,44 @@ def main() -> int:
         "retrieved_at": retrieved_at,
         "live_search": True,
         "notice": "Protocol coverage is measurable, but no search can prove that every published or unpublished case was found.",
+        "api_query_plan": queries,
+        "candidate_features": candidate_features,
+        "selection_policy": selection_policy,
         "plan_summary": {
             "api_queries": len(queries),
             "api_searches_scheduled": scheduled,
+            "structured_api_queries": sum(
+                query["query_representation"] == "concept_groups"
+                for query in queries
+            ),
+            "legacy_text_api_queries": sum(
+                query["query_representation"] == "legacy_text" for query in queries
+            ),
+            "candidate_features": len(candidate_features),
+            "max_detailed_verified_cases": selection_policy[
+                "max_detailed_verified_cases"
+            ],
+            "candidate_ranking": (
+                "plan_defined_feature_evidence_then_retrieval_support"
+                if candidate_features
+                else "retrieval_support"
+            ),
             "browser_queries_planned": len(plan.get("browser_queries") or []),
             "wechat_queries_planned": len(plan.get("wechat_queries") or []),
         },
         "protocol_audit": protocol_audit(plan, queries, coverage, args.mode),
+        "result_accounting": build_result_accounting(
+            queries, coverage, records, candidate_features
+        ),
         "coverage": coverage,
         "unique_candidate_count": len(records),
         "records": records,
     }
+    if args.output_root:
+        try:
+            wsb.write_bundle(output, args.output_root, args.output_label)
+        except (OSError, ValueError) as exc:
+            parser.error(f"cannot write output bundle: {exc}")
     json.dump(output, sys.stdout, ensure_ascii=False, indent=2 if args.pretty else None)
     sys.stdout.write("\n")
     return 0 if any(item["status"] == "success" for item in coverage) else 2

@@ -78,7 +78,7 @@ Produce multiple independent query families rather than one long query:
 - English and Chinese variants routed to appropriate sources;
 - one controlled query without a formal case-report filter.
 
-The planner may use an LLM, but its output must validate against `search-plan-template.json`. Persist the final query text, rationale, source routing, filters, and timestamp.
+The planner may use an LLM, but its output must validate against `search-plan-template.json`. Prefer a provider-neutral AND-of-OR `concept_groups` representation and compile the final Boolean text deterministically. Keep case-specific candidate features and their relative weights in the plan rather than embedding diagnoses, drugs, or universal clinical weights in connector code. Persist the structured groups, compiled query text, rationale, source routing, filters, and timestamp.
 
 ### 3. Source adapters and freshness
 
@@ -120,6 +120,8 @@ Recommended sequence:
 5. Apply a biomedical cross-encoder/reranker to the top 100–200 candidates.
 6. Extract structured case features for the top 20–50 and compare matches, decisive mismatches, and unknowns. Negative findings, timing, anatomy, pathology, and treatment response should be explicit rather than buried in one embedding.
 7. Verify that each selected item is an actual case or patient-level series and inspect possible duplicate patients/publications.
+
+Do not use the desired report length as a candidate-generation or verification cutoff. After patient-level verification, apply the plan's optional detailed-presentation budget. If the eligible set exceeds it, choose a representative detailed subset with case-configured ranking dimensions and retain every other eligible case in the machine ledger and a supplement. This volume-triggered behavior avoids hard-coded common/rare disease lists.
 
 Avoid a single opaque “confidence” number. At minimum retain:
 

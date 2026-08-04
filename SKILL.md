@@ -13,12 +13,12 @@ Resolve the directory containing this `SKILL.md` as the Skill directory. Read re
 
 1. Remove identifiers before sending any query to an external service. Exclude names, contact details, record numbers, exact addresses, exact admission dates, and unneeded rare identifying details.
 2. Convert the request into a compact case fingerprint: age band, sex if relevant, main presentation, duration, key positive and negative findings, imaging/pathology/labs, suspected diagnoses, interventions, response, outcome, and specialty.
-3. Read [references/comprehensive-search.md](references/comprehensive-search.md), [references/retrieval-workflow.md](references/retrieval-workflow.md), and [references/technical-architecture.md](references/technical-architecture.md). Use the deterministic medical retrieval core; use a Deep Research agent only as an optional planner, browser gap-filler, iterative query generator, evidence checker, or report writer. Build a query lattice that separates high-precision, presentation-first, diagnosis/differential, broad-synonym, and applicable test/treatment variants.
+3. Read [references/comprehensive-search.md](references/comprehensive-search.md), [references/retrieval-workflow.md](references/retrieval-workflow.md), and [references/technical-architecture.md](references/technical-architecture.md). Use the deterministic medical retrieval core; use a Deep Research agent only as an optional planner, browser gap-filler, iterative query generator, evidence checker, or report writer. Build a query lattice that separates high-precision, presentation-first, diagnosis/differential, broad-synonym, and applicable test/treatment variants. Represent ordinary queries as `concept_groups`: put interchangeable expressions in one group and independent concepts in separate groups so the script compiles explicit OR-within-group and AND-between-group logic. Use legacy free text only for provider-specific syntax that the structured form cannot express.
 4. Read [references/sources.md](references/sources.md) before choosing sources. Route each source by access method; never assume every website has an API. Use Crossref only as optional DOI/publisher-metadata discovery, not as clinical evidence or a replacement for PubMed and Europe PMC.
-5. Copy [references/search-plan-template.json](references/search-plan-template.json) to a temporary file, replace the example with de-identified facts, and run the comprehensive live API stage:
+5. Copy [references/search-plan-template.json](references/search-plan-template.json) to a temporary file, replace the example with de-identified facts, and define `candidate_features` from this case rather than from a global disease checklist. Give each feature case-specific synonyms and relative weight; add `mismatch_terms` only for text that explicitly contradicts the feature. Do not treat an unmentioned feature as a mismatch. Configure `selection_policy` separately: it may limit how many verified close cases receive full detailed presentation, but it must not limit retrieval, screening, verification, or the total eligible-case count. A value such as `max_detailed_verified_cases: 50` naturally presents every eligible rare case when fewer than 50 exist and moves only the excess to a supplement when more exist; never classify diseases through a hard-coded common/rare list. Resolve the user's workspace `output` directory to an absolute path before changing to the Skill directory. Run the comprehensive live API stage and create a timestamped output bundle with a short de-identified label:
 
    ```bash
-   python3 scripts/run_search_plan.py --plan /tmp/case-search-plan.json --mode comprehensive --limit 20 --max-api-searches 30 --workers 4 --pretty
+   python3 scripts/run_search_plan.py --plan /tmp/case-search-plan.json --mode comprehensive --limit 20 --max-api-searches 30 --workers 4 --output-root '/absolute/user/workspace/output' --output-label '<de-identified-brief>' --pretty
    ```
 
    Use `scripts/search_cases.py` only for a deliberately quick single-query pass. Do not call a quick pass comprehensive.
@@ -44,9 +44,13 @@ Resolve the directory containing this `SKILL.md` as the Skill directory. Read re
    ```
 
 9. Deduplicate across all query and source aliases. Treat reposts and multi-index appearances as the same case unless patient-level evidence shows otherwise.
-10. Compare cases using explicit matching, mismatching, and unknown facts. Rank clinical similarity separately from retrieval confidence and source quality.
+10. Compare cases using explicit matching, mismatching, and unknown facts. Rank clinical similarity separately from retrieval confidence and source quality. Verify and patient-deduplicate every plausible eligible case before counting it. Do not stop verification merely because a detailed-presentation budget has been reached.
 11. Build a claim-to-source ledger for the final report. Each externally verifiable clinical claim must identify its candidate, URL, evidence scope (`title`, `abstract`, `full_text`, `educational_page`, or `social_post`), supporting passage or precise location, and support status. A topical citation is not sufficient.
 12. Apply the stopping rule in `comprehensive-search.md`, then produce a source-aware report.
+
+## Output artifact contract
+
+Store the final work under `output/<de-identified-brief>_<UTC-timestamp>/`. Keep `search-report.md` as the overall human-readable report, `search-results.json` as the complete machine-readable retrieval and eligibility ledger, and one ranked candidate file per retrieved publication under `cases/`. Candidate files must state that patient-level verification is pending until completed. After verification, distinguish the total eligible close-case count from the smaller detailed-presentation set. Keep every eligible case in the machine results and a supplementary eligible-case list when the configured detailed limit is exceeded; the limit must never silently discard or relabel eligible cases. Add browser, Chinese, specialty, citation-expansion, full-text, and social findings used later in the workflow to the same bundle rather than leaving the only copy in transient tool output. Update the overall report and relevant case files after verification, and return a clickable link to `search-report.md`.
 
 ## Retrieval policy
 
@@ -60,20 +64,24 @@ Resolve the directory containing this `SKILL.md` as the Skill directory. Read re
 - Use PubMed and Europe PMC as the default evidence backbone. Use OpenAlex and similar services for discovery and citation expansion, then verify promising records against the publisher, PubMed, Europe PMC, or DOI landing page.
 - Quote only the minimum evidence needed. Store or redistribute full text only when its license permits it.
 - Treat `access_scope` as availability and `retrieved_evidence_scope` as what the connector actually retrieved. Never imply that full text was inspected merely because a PMCID or open-full-text link exists.
+- Treat `feature_evidence` as configurable document triage, not validated clinical similarity. Review its matched, mismatched, conflicting, and unknown evidence before assigning clinical similarity.
 - Preserve original titles and bibliographic metadata. Write summaries in the user's language.
 
 ## Required output contract
 
 Start with a one-paragraph de-identified search fingerprint and list the query variants used. Then report:
 
-1. **Search coverage**: query family, source, source class, retrieval method, live/cached status, retrieval time, result count, newly unique candidates, and failures or access limitations.
-2. **Closest cases**: title, year, source/publisher, identifiers, direct link, source class, access scope, peer-review status when known, similarity reasons, important differences, and a short source-grounded evidence excerpt or abstract-based fact.
-3. **Evidence separation**: group peer-reviewed case reports, educational case libraries, Chinese bibliographic records, and social-media/user-supplied material under different headings.
-4. **Verification accounting**: unique candidates, included close cases, near misses, duplicates, exclusions with reasons, full-text versus abstract-only counts, and source-class counts.
-5. **Stopping status and blind spots**: state whether the protocol stopped by saturation, access, time, API, or budget limit and list unsearched or failed channels.
-6. **Uncertainty**: distinguish facts reported by a source from inference; identify missing full text and unverified reposts.
-7. **Claim-to-source ledger**: list the source and evidence scope supporting each material clinical statement; flag unsupported, secondary-only, and abstract-only statements.
-8. **Safety note**: state that case similarity is hypothesis-generating and cannot establish diagnosis, causality, treatment suitability, or expected outcome for the current patient.
+1. **Route accounting**: separately count supported, planned, attempted, and successful query families; supported, planned, attempted, and usable source routes; and planned, successful, and failed query-source executions. Do not collapse these distinct meanings into one ambiguous path count. Include browser, subscription, Chinese, specialty, citation-expansion, and social routes when they were attempted outside the API stage.
+2. **Candidate funnel**: report overlapping provider-index hits, records actually returned, duplicate record occurrences removed, unique publication candidates, document-triaged candidates, ranked candidates, patient-level cases verified, included close cases, detailed close cases shown, additional eligible cases retained, near misses, and exclusions. Never call hits, returned records, or deduplicated publications patient cases. Fill the verified-case fields only after source-level and patient-level review.
+3. **Dimension-based triage and selection**: list the case-local dimensions in priority order with their relative weights and required status. For each dimension and shortlisted candidate, show matched, mismatched, conflicting, and unknown evidence. State the criteria used to form any review queue and detailed-presentation set; do not apply an unstated fixed threshold. Retrieve and verify by relevance rather than a target count. Apply any configured maximum only to the post-verification detailed-presentation set, and retain all other eligible cases in a supplement and the machine ledger.
+4. **Search coverage**: query family, source, source class, retrieval method, live/cached status, retrieval time, result count, newly unique candidates, and failures or access limitations.
+5. **Closest cases**: title, year, source/publisher, identifiers, direct link, source class, access scope, peer-review status when known, similarity reasons, important differences, and a short source-grounded evidence excerpt or abstract-based fact.
+6. **Evidence separation**: group peer-reviewed case reports, educational case libraries, Chinese bibliographic records, and social-media/user-supplied material under different headings.
+7. **Verification accounting**: included close cases, near misses, possible duplicate patients, exclusions with reasons, full-text versus abstract-only counts, and source-class counts.
+8. **Stopping status and blind spots**: state whether the protocol stopped by saturation, access, time, API, or budget limit and list unsearched or failed channels.
+9. **Uncertainty**: distinguish facts reported by a source from inference; identify missing full text and unverified reposts.
+10. **Claim-to-source ledger**: list the source and evidence scope supporting each material clinical statement; flag unsupported, secondary-only, and abstract-only statements.
+11. **Safety note**: state that case similarity is hypothesis-generating and cannot establish diagnosis, causality, treatment suitability, or expected outcome for the current patient.
 
 Never merge source classes into a single unlabeled confidence score. Report `clinical_similarity` and `source_quality` separately.
 

@@ -37,7 +37,13 @@ For the first three families, normally keep the case-report filter. Run at least
 
 Use English variants for PubMed, Europe PMC, and OpenAlex. Add Chinese variants for CMCR, SinoMed, CNKI, Wanfang, VIP, Chinese publisher sites, and WeChat when Chinese coverage matters. For traditional Chinese medicine, search both disease/presentation language and `医案`, `验案`, `名医医案`, `经方医案`, formula names, syndrome patterns, tongue/pulse terms, and historical terminology as applicable.
 
-Copy `search-plan-template.json` to a temporary location, replace the example with de-identified case facts, and run:
+Copy `search-plan-template.json` to a temporary location and replace the example with de-identified case facts. Prefer `concept_groups` for API queries: each nested array contains interchangeable terms joined with OR, while separate arrays are joined with AND. This keeps Boolean grouping explicit without encoding disease-specific query rules in the connector. Retain legacy `text` only when a provider-specific expression cannot be represented as concept groups.
+
+Define `candidate_features` from the current case fingerprint. Terms, mismatch terms, required flags, and relative weights belong to the plan, not to global code. The deterministic matcher uses these features only to prioritize which titles and abstracts deserve review. Absence is `unknown`; only an explicit configured mismatch term can produce `mismatched` evidence.
+
+Define a separate `selection_policy` for final presentation. `max_detailed_verified_cases` is not a retrieval limit, similarity threshold, or verification stopping rule. It applies only after source verification, patient-level deduplication, and case-local clinical inclusion. Keep all eligible cases in the machine ledger and a supplement. A plan value of 50 therefore shows every eligible case when the verified set is small and caps only the detailed narrative when the verified set is large; no disease-name list is needed.
+
+Then run:
 
 ```bash
 python3 scripts/run_search_plan.py \
@@ -76,6 +82,8 @@ Use retrieval confidence only for triage:
 
 Retrieval confidence is not clinical similarity and not evidence strength.
 
+Do not truncate the review queue merely because enough candidates exist to fill the final detailed report. Continue triage and expansion until the stopping rule is satisfied or a declared resource limitation is reached.
+
 ## Stage 5: seed expansion
 
 After identifying two to five verified close seed cases, expand each through references, citations, and related works:
@@ -101,10 +109,11 @@ For every shortlisted candidate:
 4. Trace secondary articles and WeChat posts to the original case whenever possible.
 5. Exclude papers that merely mention the disease, aggregate cases without patient-level detail, duplicate a previously counted patient, or conflict with the requested presentation on decisive features.
 6. Keep near misses in a separate section when they illuminate a differential diagnosis.
+7. Count every patient-level verified close case before applying a detailed-presentation budget. If eligible cases exceed that budget, choose the detailed set using the plan's ranking dimensions and preserve the remainder in a supplementary eligible-case list.
 
 ## Stopping rule
 
-Stop only when all applicable conditions are met:
+Stop only when all applicable conditions are met; finding 50 or any other target number of cases is not a stopping condition:
 
 - All four core query families ran successfully against PubMed and Europe PMC.
 - At least one broad unfiltered query ran and its noise was triaged.
@@ -119,8 +128,11 @@ Continue when a new terminology branch, diagnosis, author cluster, reference, or
 
 Report:
 
+- Query-family, source-route, and query-source execution counts separately; include planned, attempted, successful, failed, and not-searched states as applicable.
+- The candidate funnel from overlapping provider hits to returned records, deduplicated publication candidates, ranked candidates, verified patient-level cases, included close cases, near misses, and exclusions.
 - Unique candidates before and after verification.
 - Included close cases, near misses, duplicates, and exclusions with reasons.
+- Detailed close cases shown, the configured detailed limit, and additional eligible close cases retained outside the detailed set.
 - Query-source coverage and failures.
 - Marginal new candidates per search step.
 - Full-text versus abstract-only counts.
@@ -128,3 +140,5 @@ Report:
 - Remaining blind spots and whether the stopping rule was satisfied.
 
 Do not claim a recall percentage without a known gold-standard case set. Use terms such as `protocol complete`, `saturated under stated sources`, `access-limited`, or `budget-limited` instead of `all cases found`.
+
+Do not label index hits, returned records, or unique publications as patient cases. One publication may describe multiple patients, and multiple publications may describe the same patient. Report a patient-case count only after patient-level verification.

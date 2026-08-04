@@ -20,10 +20,61 @@
     "include_wechat": true,
     "citation_chaining": true
   },
+  "selection_policy": {
+    "max_detailed_verified_cases": 50,
+    "ranking_dimensions": [
+      "case-defined clinical feature similarity",
+      "absence of decisive case-defined conflicts",
+      "patient-level evidence completeness",
+      "original-source quality",
+      "phenotype, management, and outcome diversity"
+    ]
+  },
+  "candidate_features": [
+    {
+      "id": "recurrent-hypokalemia",
+      "label": "recurrent hypokalemia",
+      "terms": ["recurrent hypokalemia", "recurrent hypokalaemia", "hypokalemia", "hypokalaemia"],
+      "weight": 1,
+      "required": true
+    },
+    {
+      "id": "hypertension",
+      "label": "hypertension",
+      "terms": ["hypertension", "high blood pressure"],
+      "weight": 1,
+      "required": true
+    },
+    {
+      "id": "metabolic-alkalosis",
+      "label": "metabolic alkalosis",
+      "terms": ["metabolic alkalosis"],
+      "weight": 1
+    },
+    {
+      "id": "suppressed-renin",
+      "label": "suppressed renin",
+      "terms": ["suppressed renin", "low renin"],
+      "weight": 1
+    },
+    {
+      "id": "elevated-aldosterone",
+      "label": "elevated aldosterone",
+      "terms": ["elevated aldosterone", "high aldosterone"],
+      "mismatch_terms": ["suppressed aldosterone", "low aldosterone"],
+      "weight": 1
+    }
+  ],
   "api_queries": [
     {
       "id": "q1-high-precision",
-      "text": "recurrent hypokalemia hypertension metabolic alkalosis suppressed renin elevated aldosterone",
+      "concept_groups": [
+        ["recurrent hypokalemia", "recurrent hypokalaemia"],
+        ["hypertension"],
+        ["metabolic alkalosis"],
+        ["suppressed renin", "low renin"],
+        ["elevated aldosterone", "high aldosterone"]
+      ],
       "intent": "high_precision",
       "language": "en",
       "sources": ["pubmed", "europepmc", "openalex"],
@@ -33,7 +84,11 @@
     },
     {
       "id": "q2-presentation",
-      "text": "young woman recurrent hypokalemia hypertension",
+      "concept_groups": [
+        ["young woman", "young female"],
+        ["recurrent hypokalemia", "recurrent hypokalaemia"],
+        ["hypertension"]
+      ],
       "intent": "presentation",
       "language": "en",
       "sources": ["pubmed", "europepmc"],
@@ -43,7 +98,11 @@
     },
     {
       "id": "q3-differential",
-      "text": "primary aldosteronism OR renal artery stenosis OR apparent mineralocorticoid excess hypokalemia hypertension",
+      "concept_groups": [
+        ["primary aldosteronism", "renal artery stenosis", "apparent mineralocorticoid excess"],
+        ["hypokalemia", "hypokalaemia"],
+        ["hypertension"]
+      ],
       "intent": "diagnosis_or_differential",
       "language": "en",
       "sources": ["pubmed", "europepmc"],
@@ -53,7 +112,10 @@
     },
     {
       "id": "q4-broad-synonyms",
-      "text": "hypokalaemia OR hypokalemia secondary hypertension mineralocorticoid",
+      "concept_groups": [
+        ["hypokalaemia", "hypokalemia"],
+        ["secondary hypertension", "mineralocorticoid"]
+      ],
       "intent": "broad_synonyms",
       "language": "en",
       "sources": ["pubmed", "europepmc", "openalex"],
@@ -63,7 +125,12 @@
     },
     {
       "id": "q5-tests",
-      "text": "aldosterone renin ratio adrenal imaging hypokalemia hypertension",
+      "concept_groups": [
+        ["aldosterone renin ratio", "renin aldosterone ratio"],
+        ["adrenal imaging", "adrenal CT"],
+        ["hypokalemia", "hypokalaemia"],
+        ["hypertension"]
+      ],
       "intent": "test_or_pathology",
       "language": "en",
       "sources": ["pubmed", "europepmc"],

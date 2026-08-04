@@ -35,7 +35,7 @@ Remove identifiers before external calls. Generalize exact dates to duration and
 
 ## 2. Build query variants
 
-Create at least four compact core variants rather than one long narrative:
+Create at least four compact core variants rather than one long narrative. Encode ordinary variants as `concept_groups`: place synonyms and equivalent expressions in the same nested array, and place independently required concepts in separate arrays. The runner compiles OR within a group and AND between groups. Use raw `text` only when source-specific syntax is genuinely required.
 
 1. High-precision: rare finding + anatomical site + suspected diagnosis.
 2. Presentation-first: main symptoms + key test/pathology + `case report`.
@@ -48,6 +48,10 @@ Translate Chinese clinical terms into common English synonyms and MeSH-like expr
 ## 3. Execute a multi-query plan
 
 Use `run_search_plan.py` and the structure in `search-plan-template.json` for comprehensive work. Preserve query IDs and intents so a result found by several independent formulations receives stronger retrieval support. Treat this as reproducibility metadata, not as a clinical similarity score.
+
+Add `candidate_features` derived from the de-identified fingerprint when deterministic triage is useful. Configure each feature's synonyms, relative weight, required status, optional explicit `mismatch_terms`, and searchable fields in the plan. These settings are case-local and must not become a fixed disease rubric. The emitted `feature_evidence` is document-level matching; it does not replace patient-level comparison or source verification.
+
+Configure final presentation independently with `selection_policy`. An optional `max_detailed_verified_cases` value applies only to patient-level verified close cases after deduplication. It must not cap retrieval, document triage, verification, or the total number of eligible cases. Put eligible cases beyond the detailed budget in a supplementary list and retain them in `search-results.json`.
 
 ## 4. Choose retrieval routes
 
@@ -115,6 +119,8 @@ Score clinical similarity separately from source quality. Use the score to organ
 
 For every high-ranked case, state matched facts, mismatched facts, and unknowns. A shared diagnostic label without similar presentation is not automatically a close case. A high similarity score does not increase evidence quality.
 
+Do not select a fixed number merely to fill a report. First determine eligibility from the case-local required dimensions and verified evidence. When the eligible set exceeds the configured detailed budget, select the detailed subset using the plan's ordered dimensions, such as clinical similarity, decisive conflicts, evidence completeness, original-source quality, and phenotype or management diversity. These dimensions are configurable guidance, not a universal disease score.
+
 ## 7. Assess source quality
 
 Use the labels in `sources.md`. Check:
@@ -139,6 +145,16 @@ Include a coverage table even when results are empty:
 | WeChat | user-link ingestion | not requested | ... | 0 | no exhaustive public API |
 
 Use `not_searched`, `success`, `partial`, `blocked`, `subscription`, or `failed`. Never rewrite `failed` as `0 results`.
+
+Begin the final report with three explicit accounting blocks:
+
+1. Route accounting: query families, source routes, and query-source executions, each with its own denominator and status counts.
+2. Candidate funnel: provider-reported overlapping hits, returned records, duplicate occurrences removed, unique publication candidates, ranked candidates, verified patient cases, included close cases, detailed close cases shown, additional eligible cases retained, near misses, and exclusions.
+3. Dimension triage: case-local dimensions, configured priority/weight, and matched, mismatched, conflicting, and unknown counts.
+
+Use `result_accounting` from `run_search_plan.py` for the live API stage, then extend it with browser, citation-expansion, subscription, Chinese, specialty, and social routes actually attempted. Leave verification fields unset until the corresponding papers and possible duplicate patients have been reviewed. Never translate a publication count directly into a patient-case count.
+
+For persistent output, pass an absolute user-workspace path with `--output-root` and a short de-identified `--output-label`. The runner creates `output/<brief>_<UTC-timestamp>/search-report.md`, `search-results.json`, and `cases/*.md` without overwriting an existing run. The generated case files are candidate-publication dossiers with patient-level verification placeholders. Enrich the same bundle as browser, citation, full-text, Chinese, specialty, or social evidence is reviewed. After verification, report the complete eligible count, the detailed subset, and the retained overflow separately; do not leave the only copy of overflow cases or final evidence in terminal output or temporary files.
 
 ## 9. Cite evidence precisely
 
