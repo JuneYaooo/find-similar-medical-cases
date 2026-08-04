@@ -58,7 +58,7 @@ Configure final presentation independently with `selection_policy`. An optional 
 - Always attempt PubMed and Europe PMC for a clinical case-report request when network access exists.
 - Add OpenAlex when recall is thin, the condition is rare, or citation expansion is useful.
 - Add Crossref only for DOI and publisher-metadata discovery; do not use it as clinical evidence.
-- Add Chinese browser sources for Chinese-language evidence, region-specific practice, or Chinese medicine.
+- Unless the user explicitly limits language or requests a quick pass, include the principal Chinese routes CMCR, SinoMed, CNKI, Wanfang, VIP, and the Chinese Medical Journal Network in comprehensive work. Use browser or licensed access and record blocked or subscription-only routes rather than treating them as zero results.
 - Add specialty libraries only when imaging, pathology, ophthalmology, or patient-safety teaching cases materially help.
 - Add WeChat only when requested, when the user supplies an article, or when a known professional account is likely to cover the topic. Use TikHub only with an explicit call budget and keep its provider status separate from article evidence quality.
 - Use a local cache for deduplication and longitudinal monitoring, not as an unlabeled replacement for live retrieval.
@@ -148,7 +148,7 @@ Use `not_searched`, `success`, `partial`, `blocked`, `subscription`, or `failed`
 
 Begin the final report with three explicit accounting blocks:
 
-1. Route accounting: query families, source routes, and query-source executions, each with its own denominator and status counts.
+1. Route accounting: query families, source routes, and query-source executions, each with its own denominator and status counts; report English and Chinese coverage separately.
 2. Candidate funnel: provider-reported overlapping hits, returned records, duplicate occurrences removed, unique publication candidates, ranked candidates, verified patient cases, included close cases, detailed close cases shown, additional eligible cases retained, near misses, and exclusions.
 3. Dimension triage: case-local dimensions, configured priority/weight, and matched, mismatched, conflicting, and unknown counts.
 

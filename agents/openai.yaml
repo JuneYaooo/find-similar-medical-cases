@@ -1,4 +1,4 @@
 interface:
-  display_name: "相似病例检索"
-  short_description: "Comprehensively find and verify similar medical cases"
-  default_prompt: "Use $find-similar-medical-cases to run a comprehensive, reproducible search for cases similar to my de-identified medical presentation."
+  display_name: "中英文相似病例研究"
+  short_description: "Bilingual case research for medical researchers"
+  default_prompt: "Use $find-similar-medical-cases to run a reproducible search across major English and Chinese sources for cases similar to my de-identified medical presentation."

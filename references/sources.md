@@ -5,6 +5,7 @@ Consult this file whenever selecting, adding, or troubleshooting sources. A "liv
 ## Contents
 
 - Routing matrix
+- Baseline bilingual coverage
 - Supported live API connectors
 - Supported third-party API connector
 - Browser-search sources
@@ -25,6 +26,15 @@ Consult this file whenever selecting, adding, or troubleshooting sources. A "liv
 | Specialty educational library | Radiopaedia, AHRQ WebM&M, EyeRounds, Pathology Outlines | Browser search | Search on demand | Educational comparison; not automatically peer reviewed |
 | Social media | WeChat articles | User link, manual search, allowlist, or licensed API | Search/ingest on demand | Secondary source until original evidence is verified |
 | Local collection | Previously saved metadata or licensed full text | Local search | Snapshot only | Supplement; always show snapshot date |
+
+## Baseline bilingual coverage
+
+This Skill is intended for medical researchers. Unless the user explicitly restricts language or requests a quick pass, a comprehensive search must plan and account for both language groups:
+
+- English: run every core query family through PubMed and Europe PMC; use OpenAlex for discovery and citation expansion; search major case journals or relevant specialty libraries when index recall is insufficient.
+- Chinese: attempt CMCR, SinoMed, CNKI, Wanfang, VIP, and the Chinese Medical Journal Network with Chinese terminology through supported browser or licensed access; add relevant Chinese specialty repositories when applicable.
+
+Coverage means that the route was planned and its status was recorded. It does not mean every route was accessible or that all cases were found. Report each language group separately and label unavailable, blocked, login-required, and subscription-only routes explicitly. Never report an inaccessible Chinese source as zero results, and never call a comprehensive bilingual search complete when the Chinese group was silently omitted.
 
 ## Supported live API connectors
 
