@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="940" viewBox="0 0 1440 940" role="img" aria-labelledby="title desc">
+  <title id="title">相似病例查询逻辑</title>
+  <desc id="desc">病例经过隐私处理和特征整理后，分成多条检索路径查询多个来源，再经过合并去重、关键论文扩展、临床比较和证据核验，最终形成带检索范围的报告</desc>
+
+  <rect width="1440" height="940" fill="#f2eee5"/>
+  <path d="M64 64H1376M64 876H1376" stroke="#c9c1b4"/>
+  <path d="M64 64V876M1376 64V876" stroke="#c9c1b4"/>
+
+  <g font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif">
+    <text x="96" y="112" fill="#a64f32" font-family="Georgia, 'Times New Roman', serif" font-size="18" font-style="italic">How the search works</text>
+    <text x="96" y="158" fill="#203138" font-family="Georgia, 'Songti SC', serif" font-size="36" font-weight="700">从病例描述到可复核的检索报告</text>
+    <text x="96" y="193" fill="#667174" font-size="16">主线是“先提高覆盖，再严格核对”；新线索会回到检索阶段继续查找。</text>
+    <text x="1254" y="112" fill="#7a756c" font-size="13">LOGIC / 01</text>
+    <path d="M96 220H1344" stroke="#203138" stroke-width="2"/>
+
+    <!-- Stage labels -->
+    <text x="96" y="262" fill="#a64f32" font-size="13" letter-spacing="1.6">整理输入</text>
+    <text x="96" y="450" fill="#a64f32" font-size="13" letter-spacing="1.6">扩大覆盖</text>
+    <text x="96" y="638" fill="#a64f32" font-size="13" letter-spacing="1.6">收窄与核验</text>
+
+    <!-- Row 1 -->
+    <g transform="translate(238 252)">
+      <text x="0" y="30" fill="#a64f32" font-family="Georgia, serif" font-size="38">01</text>
+      <text x="62" y="21" fill="#203138" font-size="19" font-weight="600">隐私处理</text>
+      <text x="62" y="48" fill="#667174" font-size="15">删除姓名、编号、精确日期等身份信息</text>
+    </g>
+    <path d="M612 278H690" stroke="#8b938f" stroke-width="1.5"/>
+    <path d="M680 270L690 278L680 286" fill="none" stroke="#8b938f" stroke-width="1.5"/>
+    <g transform="translate(726 252)">
+      <text x="0" y="30" fill="#a64f32" font-family="Georgia, serif" font-size="38">02</text>
+      <text x="62" y="21" fill="#203138" font-size="19" font-weight="600">病例指纹</text>
+      <text x="62" y="48" fill="#667174" font-size="15">表现 · 病程 · 检查 · 暴露 · 反应 · 结局</text>
+      <text x="62" y="75" fill="#667174" font-size="15">观察事实与怀疑诊断分开</text>
+    </g>
+    <path d="M238 360H1248" stroke="#c9c1b4"/>
+
+    <!-- Row 2 -->
+    <g transform="translate(238 438)">
+      <text x="0" y="30" fill="#a64f32" font-family="Georgia, serif" font-size="38">03</text>
+      <text x="62" y="21" fill="#203138" font-size="19" font-weight="600">多条检索路径</text>
+      <text x="62" y="49" fill="#667174" font-size="15">高精度 / 表现优先 / 鉴别诊断</text>
+      <text x="62" y="75" fill="#667174" font-size="15">宽泛同义词 / 检查治疗 / 中英文</text>
+    </g>
+    <path d="M612 477H690" stroke="#8b938f" stroke-width="1.5"/>
+    <path d="M680 469L690 477L680 485" fill="none" stroke="#8b938f" stroke-width="1.5"/>
+    <g transform="translate(726 438)">
+      <text x="0" y="30" fill="#a64f32" font-family="Georgia, serif" font-size="38">04</text>
+      <text x="62" y="21" fill="#203138" font-size="19" font-weight="600">多来源并行查找</text>
+      <text x="62" y="49" fill="#667174" font-size="15">PubMed · Europe PMC · OpenAlex</text>
+      <text x="62" y="75" fill="#667174" font-size="15">中文数据库 · 专科病例库 · 可选线索</text>
+    </g>
+    <path d="M238 548H1248" stroke="#c9c1b4"/>
+
+    <!-- Row 3 -->
+    <g transform="translate(238 626)">
+      <text x="0" y="30" fill="#a64f32" font-family="Georgia, serif" font-size="38">05</text>
+      <text x="62" y="21" fill="#203138" font-size="19" font-weight="600">统一信息、合并去重</text>
+      <text x="62" y="49" fill="#667174" font-size="15">DOI · PMID · PMCID · 标题 · 年份 · 作者</text>
+    </g>
+    <path d="M612 652H690" stroke="#8b938f" stroke-width="1.5"/>
+    <path d="M680 644L690 652L680 660" fill="none" stroke="#8b938f" stroke-width="1.5"/>
+    <g transform="translate(726 626)">
+      <text x="0" y="30" fill="#a64f32" font-family="Georgia, serif" font-size="38">06</text>
+      <text x="62" y="21" fill="#203138" font-size="19" font-weight="600">种子论文扩展</text>
+      <text x="62" y="49" fill="#667174" font-size="15">相似文章 · 参考文献 · 后续引用</text>
+    </g>
+
+    <!-- Feedback loop -->
+    <path d="M1128 643C1282 643 1300 582 1300 502C1300 422 1265 394 1154 394H1000" fill="none" stroke="#a64f32" stroke-width="1.5" stroke-dasharray="5 5"/>
+    <path d="M1011 386L1000 394L1011 402" fill="none" stroke="#a64f32" stroke-width="1.5"/>
+    <text x="1162" y="589" fill="#a64f32" font-size="13">新术语、新引用</text>
+    <text x="1193" y="609" fill="#a64f32" font-size="13">回到检索</text>
+
+    <!-- Final row -->
+    <path d="M238 732H1248" stroke="#c9c1b4"/>
+    <g transform="translate(238 764)">
+      <text x="0" y="30" fill="#a64f32" font-family="Georgia, serif" font-size="38">07</text>
+      <text x="62" y="21" fill="#203138" font-size="19" font-weight="600">临床特征比较</text>
+      <text x="62" y="49" fill="#667174" font-size="15">相同 / 不同 / 未知，来源质量另算</text>
+    </g>
+    <path d="M612 790H690" stroke="#8b938f" stroke-width="1.5"/>
+    <path d="M680 782L690 790L680 798" fill="none" stroke="#8b938f" stroke-width="1.5"/>
+    <g transform="translate(726 764)">
+      <text x="0" y="30" fill="#a64f32" font-family="Georgia, serif" font-size="38">08</text>
+      <text x="62" y="21" fill="#203138" font-size="19" font-weight="600">证据核验与报告</text>
+      <text x="62" y="49" fill="#667174" font-size="15">原文来源 · 检索范围 · 限制 · 停止原因</text>
+    </g>
+
+    <text x="96" y="910" fill="#7a756c" font-size="13">相似病例检索用于文献回顾和提出假设，不用于直接诊断或治疗决策。</text>
+    <text x="1212" y="910" fill="#7a756c" font-size="13">SOURCE FIRST</text>
+  </g>
+</svg>
