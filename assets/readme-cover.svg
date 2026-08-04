@@ -1,115 +1,46 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1440" height="640" viewBox="0 0 1440 640" role="img" aria-labelledby="title desc">
   <title id="title">Find Similar Medical Cases</title>
-  <desc id="desc">通过 AI 查找、核验和比较相似医学病例</desc>
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#071A2B"/>
-      <stop offset="0.55" stop-color="#0B2A3B"/>
-      <stop offset="1" stop-color="#0E3A43"/>
-    </linearGradient>
-    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0" stop-color="#55D6BE" stop-opacity=".26"/>
-      <stop offset="1" stop-color="#55D6BE" stop-opacity="0"/>
-    </radialGradient>
-    <pattern id="grid" width="34" height="34" patternUnits="userSpaceOnUse">
-      <path d="M34 0H0V34" fill="none" stroke="#A6E7DA" stroke-opacity=".055"/>
-    </pattern>
-    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%">
-      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#001018" flood-opacity=".32"/>
-    </filter>
-    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="24"/>
-    </filter>
-  </defs>
+  <desc id="desc">从去除身份信息的病例出发，经过多来源检索，得到可以核对的相似病例记录</desc>
 
-  <rect width="1440" height="640" rx="30" fill="url(#bg)"/>
-  <rect width="1440" height="640" rx="30" fill="url(#grid)"/>
-  <circle cx="1120" cy="286" r="330" fill="url(#glow)"/>
-  <circle cx="168" cy="620" r="220" fill="#176B6A" opacity=".16" filter="url(#soft)"/>
+  <rect width="1440" height="640" fill="#f2eee5"/>
+  <path d="M0 72H1440M0 568H1440" stroke="#c9c1b4" stroke-width="1"/>
+  <path d="M72 0V640M1368 0V640" stroke="#c9c1b4" stroke-width="1"/>
 
-  <g font-family="Inter,-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif">
-    <g transform="translate(92 96)">
-      <rect width="178" height="42" rx="21" fill="#153D4C" stroke="#55D6BE" stroke-opacity=".52"/>
-      <circle cx="24" cy="21" r="6" fill="#55D6BE"/>
-      <text x="42" y="27" font-size="16" font-weight="650" fill="#D8FFF7" letter-spacing=".6">AGENT SKILL</text>
-
-      <text x="0" y="120" font-size="58" font-weight="760" fill="#FFFFFF" letter-spacing="-1.8">Find Similar</text>
-      <text x="0" y="184" font-size="58" font-weight="760" fill="#FFFFFF" letter-spacing="-1.8">Medical Cases</text>
-      <text x="0" y="240" font-size="25" font-weight="520" fill="#A8D7D4">让 AI 帮你查找、核验和比较相似医学病例</text>
-
-      <g transform="translate(0 286)">
-        <rect width="128" height="38" rx="19" fill="#FFFFFF" fill-opacity=".09"/>
-        <text x="64" y="25" text-anchor="middle" font-size="15" font-weight="600" fill="#DDF8F4">多来源检索</text>
-        <rect x="140" width="128" height="38" rx="19" fill="#FFFFFF" fill-opacity=".09"/>
-        <text x="204" y="25" text-anchor="middle" font-size="15" font-weight="600" fill="#DDF8F4">相似点比较</text>
-        <rect x="280" width="128" height="38" rx="19" fill="#FFFFFF" fill-opacity=".09"/>
-        <text x="344" y="25" text-anchor="middle" font-size="15" font-weight="600" fill="#DDF8F4">来源可追溯</text>
-      </g>
-
-      <g transform="translate(0 360)">
-        <path d="M2 22l10 10L36 6" fill="none" stroke="#55D6BE" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-        <text x="54" y="28" font-size="18" fill="#C3E4E1">去重、核验，并明确告诉你还漏了哪些地方</text>
-      </g>
-    </g>
-
-    <g transform="translate(812 78)" filter="url(#shadow)">
-      <g transform="translate(74 62) rotate(-7 212 190)">
-        <rect width="424" height="404" rx="24" fill="#DFF6F0" opacity=".58"/>
-      </g>
-      <g transform="translate(38 34) rotate(5 230 210)">
-        <rect width="460" height="420" rx="24" fill="#EAF9F5" opacity=".86"/>
-      </g>
-      <g>
-        <rect width="500" height="448" rx="28" fill="#FFFFFF"/>
-        <rect x="28" y="28" width="146" height="28" rx="14" fill="#E5F7F2"/>
-        <circle cx="47" cy="42" r="6" fill="#17A589"/>
-        <text x="61" y="47" font-size="13" font-weight="700" fill="#116C61">相似病例报告</text>
-
-        <rect x="28" y="82" width="318" height="18" rx="9" fill="#183B4A"/>
-        <rect x="28" y="112" width="396" height="11" rx="5.5" fill="#B9CDD3"/>
-        <rect x="28" y="133" width="344" height="11" rx="5.5" fill="#D1DEE2"/>
-
-        <g transform="translate(28 174)">
-          <rect width="444" height="86" rx="16" fill="#F3F9F8" stroke="#D6EAE6"/>
-          <circle cx="32" cy="28" r="13" fill="#CFF3E9"/>
-          <path d="M26 28l4 4 8-10" fill="none" stroke="#15977F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-          <text x="56" y="31" font-size="15" font-weight="700" fill="#183B4A">为什么相似</text>
-          <rect x="56" y="46" width="322" height="9" rx="4.5" fill="#A9C6C2"/>
-          <rect x="56" y="63" width="244" height="9" rx="4.5" fill="#D1E1DE"/>
-        </g>
-
-        <g transform="translate(28 276)">
-          <rect width="212" height="128" rx="16" fill="#FFF8EC" stroke="#F1DEB7"/>
-          <text x="18" y="28" font-size="14" font-weight="700" fill="#7A5410">重要差异</text>
-          <circle cx="21" cy="54" r="4" fill="#D99C2B"/>
-          <rect x="34" y="49" width="142" height="9" rx="4.5" fill="#D8B978"/>
-          <circle cx="21" cy="77" r="4" fill="#D99C2B"/>
-          <rect x="34" y="72" width="119" height="9" rx="4.5" fill="#E5CEA0"/>
-          <circle cx="21" cy="100" r="4" fill="#D99C2B"/>
-          <rect x="34" y="95" width="151" height="9" rx="4.5" fill="#E5CEA0"/>
-        </g>
-
-        <g transform="translate(260 276)">
-          <rect width="212" height="128" rx="16" fill="#EEF6FF" stroke="#CFDFF0"/>
-          <text x="18" y="28" font-size="14" font-weight="700" fill="#24577A">证据来源</text>
-          <rect x="18" y="45" width="74" height="24" rx="12" fill="#D8EAFE"/>
-          <text x="55" y="62" text-anchor="middle" font-size="11" font-weight="700" fill="#24577A">论文摘要</text>
-          <rect x="100" y="45" width="72" height="24" rx="12" fill="#DDF5EC"/>
-          <text x="136" y="62" text-anchor="middle" font-size="11" font-weight="700" fill="#116C61">已核验</text>
-          <rect x="18" y="84" width="160" height="9" rx="4.5" fill="#B9CBDD"/>
-          <rect x="18" y="102" width="126" height="9" rx="4.5" fill="#D4E0EB"/>
-        </g>
-      </g>
-
-      <g transform="translate(326 292)">
-        <circle cx="86" cy="86" r="72" fill="#0A2939" fill-opacity=".96" stroke="#72E2CC" stroke-width="9"/>
-        <circle cx="86" cy="86" r="48" fill="#55D6BE" fill-opacity=".14"/>
-        <path d="M137 137l54 54" stroke="#72E2CC" stroke-width="18" stroke-linecap="round"/>
-        <circle cx="65" cy="73" r="8" fill="#72E2CC"/>
-        <circle cx="104" cy="61" r="8" fill="#89B8FF"/>
-        <circle cx="111" cy="101" r="8" fill="#F4C66D"/>
-        <path d="M72 70l24-7M69 79l34 18M106 69l4 24" fill="none" stroke="#C9FFF5" stroke-opacity=".7" stroke-width="3"/>
-      </g>
-    </g>
+  <g fill="#203138" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif">
+    <text x="96" y="112" font-size="16" letter-spacing="2.6">OPEN MEDICAL LITERATURE · 01</text>
+    <text x="96" y="230" font-family="Georgia, 'Times New Roman', serif" font-size="78" font-weight="700" letter-spacing="-2">Find Similar</text>
+    <text x="96" y="312" font-family="Georgia, 'Times New Roman', serif" font-size="78" font-weight="700" letter-spacing="-2">Medical Cases</text>
+    <text x="100" y="374" font-size="23">从一段病例描述出发，找到可以回到原文核对的相似病例。</text>
   </g>
+
+  <circle cx="101" cy="446" r="6" fill="#a64f32"/>
+  <text x="122" y="453" fill="#59666a" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="17">检索 · 去重 · 比较 · 记录未覆盖的范围</text>
+
+  <g transform="translate(820 104)" font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif">
+    <text x="0" y="15" fill="#7a756c" font-size="14" letter-spacing="1.8">SEARCH RECORD</text>
+    <path d="M0 38H482" stroke="#203138" stroke-width="2"/>
+
+    <text x="0" y="90" fill="#a64f32" font-family="Georgia, 'Times New Roman', serif" font-size="34">01</text>
+    <text x="72" y="80" fill="#203138" font-size="18" font-weight="600">去除身份信息的病例</text>
+    <text x="72" y="106" fill="#687276" font-size="15">表现、检查、用药、时间关系</text>
+    <path d="M18 116V156" stroke="#a9a196" stroke-width="1.5"/>
+
+    <text x="0" y="196" fill="#a64f32" font-family="Georgia, 'Times New Roman', serif" font-size="34">02</text>
+    <text x="72" y="186" fill="#203138" font-size="18" font-weight="600">多条检索路径</text>
+    <text x="72" y="212" fill="#687276" font-size="15">不预设诊断，换不同角度继续找</text>
+    <path d="M18 222V262" stroke="#a9a196" stroke-width="1.5"/>
+
+    <text x="0" y="302" fill="#a64f32" font-family="Georgia, 'Times New Roman', serif" font-size="34">03</text>
+    <text x="72" y="292" fill="#203138" font-size="18" font-weight="600">论文与病例来源</text>
+    <text x="72" y="318" fill="#687276" font-size="15">PubMed · Europe PMC · OpenAlex · 中文资料</text>
+    <path d="M18 328V368" stroke="#a9a196" stroke-width="1.5"/>
+
+    <text x="0" y="408" fill="#a64f32" font-family="Georgia, 'Times New Roman', serif" font-size="34">04</text>
+    <text x="72" y="398" fill="#203138" font-size="18" font-weight="600">可复核的检索记录</text>
+    <text x="72" y="424" fill="#687276" font-size="15">相同点、差异、证据范围与遗漏</text>
+    <path d="M0 455H482" stroke="#203138" stroke-width="2"/>
+  </g>
+
+  <text x="96" y="604" fill="#7a756c" font-family="Arial, sans-serif" font-size="13" letter-spacing="1.4">FIND-SIMILAR-MEDICAL-CASES</text>
+  <text x="1258" y="604" fill="#7a756c" font-family="Arial, sans-serif" font-size="13">2026</text>
 </svg>
