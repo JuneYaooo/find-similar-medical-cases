@@ -6,7 +6,6 @@
 
 查病例时，麻烦的往往不是搜到一篇论文，而是换几种说法继续找、顺着参考文献追下去、排掉重复结果，再判断两份病例究竟像不像。这个项目把这些步骤交给 Codex 完成，最后留下可核对的来源和检索范围。
 
-[![CI](https://github.com/JuneYaooo/find-similar-medical-cases/actions/workflows/ci.yml/badge.svg)](https://github.com/JuneYaooo/find-similar-medical-cases/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 
 ## 适合谁
