@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -13,6 +16,8 @@ SCRIPTS = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 import run_search_plan as rsp  # noqa: E402
+import benchmark_case_studies as bcs  # noqa: E402
+import rerank_candidates as rrc  # noqa: E402
 import write_search_bundle as wsb  # noqa: E402
 
 
@@ -198,6 +203,308 @@ class WorkflowTests(unittest.TestCase):
         )
         self.assertFalse(rsp.contains_evidence_term("female patient", "male"))
 
+    def test_conflicting_feature_does_not_count_as_required_match(self) -> None:
+        features = rsp.validate_candidate_features(
+            {
+                "candidate_features": [
+                    {
+                        "id": "disease",
+                        "terms": ["melanoma"],
+                        "mismatch_terms": ["non-small cell lung cancer"],
+                        "weight": 3,
+                        "required": True,
+                    }
+                ]
+            }
+        )
+        record = rsp.sc.base_record("pubmed", "now")
+        record.update(
+            title="A non-small cell lung cancer case report",
+            abstract="BRAF inhibitors are also used in melanoma.",
+        )
+        rsp.annotate_candidate(record, features)
+        evidence = record["feature_evidence"]
+        self.assertEqual(evidence["features"][0]["status"], "conflicting")
+        self.assertEqual(evidence["required_evidence_match_percent"], 0.0)
+        self.assertEqual(evidence["matched_weight"], 0.0)
+        self.assertEqual(evidence["mismatched_weight"], 3.0)
+
+    def test_explicit_mismatch_and_case_signal_precede_title_bonus(self) -> None:
+        features = rsp.validate_candidate_features(
+            {
+                "candidate_features": [
+                    {
+                        "id": "stones",
+                        "terms": ["cholelithiasis"],
+                        "weight": 3,
+                        "required": True,
+                    },
+                    {
+                        "id": "population",
+                        "terms": ["older adult"],
+                        "mismatch_terms": ["cat"],
+                        "weight": 2,
+                    },
+                ]
+            }
+        )
+        human_case = rsp.sc.base_record("pubmed", "now")
+        human_case.update(
+            pmid="1",
+            title="Cholelithiasis: a case report",
+            publication_types=["Case Reports"],
+        )
+        animal_case = rsp.sc.base_record("pubmed", "now")
+        animal_case.update(
+            pmid="2",
+            title="Cholelithiasis in a cat: a case report",
+            publication_types=["Case Reports"],
+        )
+        review = rsp.sc.base_record("pubmed", "now")
+        review.update(pmid="3", title="Cholelithiasis: a review")
+        for record in (human_case, animal_case, review):
+            rsp.annotate_candidate(record, features)
+        human_case["reranker"] = {"score": 0.1}
+        animal_case["reranker"] = {"score": 100.0}
+        review["reranker"] = {"score": 50.0}
+        ranked = sorted(
+            [review, animal_case, human_case],
+            key=lambda record: rsp.candidate_sort_key(record, True, True),
+            reverse=True,
+        )
+        self.assertEqual([record["pmid"] for record in ranked], ["1", "3", "2"])
+
+    def test_medcpt_reranker_query_scoring_and_provenance(self) -> None:
+        query = rrc.build_case_query(
+            {
+                "case_fingerprint": {
+                    "age_band": "child",
+                    "main_presentation": ["thrombocytopenia", "hearing loss"],
+                    "labs_imaging_pathology": ["proteinuria"],
+                }
+            }
+        )
+        self.assertEqual(
+            query,
+            "Age: child. Presentation: thrombocytopenia, hearing loss. "
+            "Tests and pathology: proteinuria",
+        )
+        first = rsp.sc.base_record("pubmed", "now")
+        first.update(pmid="1", title="First case", abstract="Less relevant")
+        second = rsp.sc.base_record("pubmed", "now")
+        second.update(pmid="2", title="Second case", abstract="More relevant")
+        for record in (first, second):
+            rsp.annotate_candidate(record)
+
+        def fake_scorer(query_text, documents, **kwargs):
+            self.assertEqual(query_text, query)
+            self.assertEqual(len(documents), 2)
+            self.assertIn("Title: First case", documents[0])
+            return [0.25, 2.5], {
+                "backend": "fake_sequence_classifier",
+                "model": kwargs["model_name"],
+                "requested_revision": kwargs["revision"],
+                "resolved_revision": "commit-abc",
+                "score_semantics": "test_logit",
+            }
+
+        summary = rrc.rerank_records(
+            [first, second],
+            query,
+            top_k=2,
+            model_name="test/medcpt",
+            revision="revision-1",
+            scorer=fake_scorer,
+        )
+        self.assertEqual(summary["status"], "applied")
+        self.assertEqual(summary["resolved_revision"], "commit-abc")
+        self.assertEqual(second["reranker"]["pre_reranker_rank"], 2)
+        ranked = sorted(
+            [first, second],
+            key=lambda record: rsp.candidate_sort_key(record, False, True),
+            reverse=True,
+        )
+        self.assertEqual(ranked[0]["pmid"], "2")
+
+    def test_reranker_rejects_invalid_scores(self) -> None:
+        record = rsp.sc.base_record("pubmed", "now")
+        record.update(pmid="1", title="Candidate")
+
+        def invalid_scorer(*args, **kwargs):
+            return [float("nan")], {"resolved_revision": "test"}
+
+        with self.assertRaisesRegex(rrc.RerankerError, "not finite"):
+            rrc.rerank_records(
+                [record], "de-identified query", top_k=1, scorer=invalid_scorer
+            )
+
+    def test_siliconflow_reranker_parses_indexed_results_without_persisting_key(self) -> None:
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read(self):
+                return json.dumps(
+                    {
+                        "results": [
+                            {"index": 1, "relevance_score": 2.0},
+                            {"index": 0, "relevance_score": 0.5},
+                        ]
+                    }
+                ).encode("utf-8")
+
+        def fake_urlopen(request, timeout):
+            self.assertEqual(request.full_url, rrc.DEFAULT_SILICONFLOW_ENDPOINT)
+            self.assertEqual(timeout, 90)
+            body = json.loads(request.data.decode("utf-8"))
+            self.assertEqual(body["model"], rrc.DEFAULT_SILICONFLOW_MODEL)
+            self.assertEqual(body["top_n"], 2)
+            self.assertEqual(body["return_documents"], False)
+            self.assertIn("Bearer unit-secret", str(request.headers))
+            return FakeResponse()
+
+        with mock.patch.dict(os.environ, {"SILICONFLOW_API_KEY": "unit-secret"}):
+            with mock.patch.object(rrc.urlrequest, "urlopen", fake_urlopen):
+                scores, metadata = rrc.score_documents_siliconflow(
+                    "case query", ["doc one", "doc two"]
+                )
+        self.assertEqual(scores, [0.5, 2.0])
+        self.assertEqual(metadata["backend"], "siliconflow_rerank_api")
+        self.assertNotIn("unit-secret", json.dumps(metadata))
+
+    def test_siliconflow_reranker_requires_key_and_https(self) -> None:
+        with mock.patch.object(rrc, "env_value", return_value=None):
+            with self.assertRaisesRegex(rrc.RerankerError, "SILICONFLOW_API_KEY"):
+                rrc.score_documents_siliconflow("query", ["document"])
+        with mock.patch.dict(os.environ, {"SILICONFLOW_API_KEY": "unit-secret"}):
+            with self.assertRaisesRegex(rrc.RerankerError, "HTTPS"):
+                rrc.score_documents_siliconflow(
+                    "query", ["document"], endpoint="http://localhost/rerank"
+                )
+
+    def test_feature_evidence_prefers_title_over_abstract_synonym(self) -> None:
+        features = rsp.validate_candidate_features(
+            {
+                "candidate_features": [
+                    {
+                        "id": "hearing",
+                        "terms": ["deafness", "hearing impairment"],
+                        "weight": 3,
+                    }
+                ]
+            }
+        )
+        record = rsp.sc.base_record("pubmed", "now")
+        record.update(
+            title="Familial hearing impairment with nephropathy",
+            abstract="The patient was evaluated for deafness.",
+        )
+        rsp.annotate_candidate(record, features)
+        evidence = record["feature_evidence"]
+        self.assertEqual(
+            evidence["features"][0]["evidence"],
+            [{"kind": "match", "term": "hearing impairment", "field": "title"}],
+        )
+        self.assertEqual(evidence["title_matched_weight"], 3)
+
+    def test_provider_ranks_survive_merge_and_drive_rrf(self) -> None:
+        query_one = {"id": "q1", "intent": "high_precision"}
+        query_two = {"id": "q2", "intent": "presentation"}
+        pubmed = rsp.sc.base_record("pubmed", "now")
+        pubmed.update(pmid="123", title="A shared candidate")
+        europepmc = rsp.sc.base_record("europepmc", "now")
+        europepmc.update(pmid="123", title="A shared candidate")
+        merged = rsp.merge_with_aliases(
+            [
+                rsp.tag_record(pubmed, query_one, "pubmed", 2),
+                rsp.tag_record(europepmc, query_two, "europepmc", 7),
+            ]
+        )
+        self.assertEqual(len(merged), 1)
+        occurrences = merged[0]["source_occurrences"]
+        self.assertEqual(
+            {(item["source_key"], item["query_id"], item["rank"]) for item in occurrences},
+            {("pubmed", "q1", 2), ("europepmc", "q2", 7)},
+        )
+        rsp.annotate_candidate(merged[0])
+        support = merged[0]["retrieval_support"]
+        self.assertEqual(support["ranked_occurrence_count"], 2)
+        self.assertEqual(support["best_source_rank"], 2)
+        self.assertAlmostEqual(
+            support["rrf_score"],
+            1 / (rsp.RRF_K + 2) + 1 / (rsp.RRF_K + 7),
+            places=8,
+        )
+
+    def test_rrf_is_primary_retrieval_sort_signal(self) -> None:
+        multi_route = rsp.sc.base_record("openalex", "now")
+        multi_route.update(
+            doi="10.1000/multi",
+            title="Multi-route candidate",
+            matched_queries=["q1", "q2"],
+            query_intents=["presentation", "broad_synonyms"],
+            source_occurrences=[
+                {"source_key": "openalex", "query_id": "q1", "rank": 3},
+                {"source_key": "openalex", "query_id": "q2", "rank": 4},
+            ],
+        )
+        single_route = rsp.sc.base_record("pubmed", "now")
+        single_route.update(
+            pmid="456",
+            title="Single-route case report",
+            publication_types=["Case Reports"],
+            matched_queries=["q1"],
+            query_intents=["high_precision"],
+            source_occurrences=[
+                {"source_key": "pubmed", "query_id": "q1", "rank": 1}
+            ],
+        )
+        for record in (multi_route, single_route):
+            rsp.annotate_candidate(record)
+        ranked = sorted(
+            [single_route, multi_route],
+            key=lambda record: rsp.candidate_sort_key(record, False),
+            reverse=True,
+        )
+        self.assertEqual(ranked[0]["doi"], "10.1000/multi")
+
+    def test_pmc_patients_fixture_and_overlap_metric_contract(self) -> None:
+        benchmark = bcs.load_benchmark(
+            ROOT / "benchmarks" / "pmc-patients-case-studies.json"
+        )
+        self.assertEqual(len(benchmark["cases"]), 3)
+        self.assertIn("not exhaustive relevance judgments", benchmark["caveat"])
+        expected_executions = {
+            "pmc-case-1-diagnosis": 10,
+            "pmc-case-2-test": 12,
+            "pmc-case-3-treatment": 12,
+        }
+        for case in benchmark["cases"]:
+            self.assertEqual(len(case["reference_top5"]), 5)
+            validation = bcs.validate_plan(bcs.build_plan(case), 12)
+            self.assertEqual(
+                validation["query_source_executions"], expected_executions[case["id"]]
+            )
+        summary = bcs.overlap_summary(
+            ["1", "2", "3", "4", "5"], {"1": 2, "3": 17}
+        )
+        self.assertEqual(summary["at_5"]["count"], 1)
+        self.assertEqual(summary["at_20"]["count"], 2)
+        self.assertNotIn("recall", json.dumps(summary).casefold())
+
+        invalid = deepcopy(benchmark)
+        invalid["cases"][0]["reference_top5"][0] = "not an object"
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "invalid.json"
+            path.write_text(json.dumps(invalid), encoding="utf-8")
+            with self.assertRaisesRegex(
+                bcs.BenchmarkError, "reference_top5 items must be objects"
+            ):
+                bcs.load_benchmark(path)
+
     def test_result_accounting_separates_routes_records_and_verified_cases(self) -> None:
         queries = [
             {
@@ -275,6 +582,13 @@ class WorkflowTests(unittest.TestCase):
             query_intents=["high_precision"],
         )
         rsp.annotate_candidate(record, features)
+        record["reranker"] = {
+            "status": "scored",
+            "model": "test/medcpt",
+            "score": 1.25,
+            "pre_reranker_rank": 2,
+            "post_reranker_rank": 1,
+        }
         queries = [
             {
                 "id": "q1",
@@ -299,6 +613,11 @@ class WorkflowTests(unittest.TestCase):
             "case_id": "deidentified-example",
             "retrieved_at": "2026-08-04T06:16:23+00:00",
             "mode": "quick",
+            "reranker": {
+                "status": "applied",
+                "model": "test/medcpt",
+                "candidates_scored": 1,
+            },
             "coverage": coverage,
             "records": [record],
             "result_accounting": rsp.build_result_accounting(
@@ -319,6 +638,10 @@ class WorkflowTests(unittest.TestCase):
                 "候选漏斗", (bundle / "search-report.md").read_text(encoding="utf-8")
             )
             self.assertIn("患者级核验", case_files[0].read_text(encoding="utf-8"))
+            self.assertIn(
+                "Reranker 原始分",
+                case_files[0].read_text(encoding="utf-8"),
+            )
             saved = json.loads(
                 (bundle / "search-results.json").read_text(encoding="utf-8")
             )

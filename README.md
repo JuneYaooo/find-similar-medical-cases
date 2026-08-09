@@ -107,6 +107,8 @@ PubMed 和 Europe PMC 是英文医学文献的主干。OpenAlex 用来扩大候�
 
 在人工逐项比较之前，程序可以使用当前检索计划提供的病例特征，对题名和摘要做一轮可解释的初排。特征、同义词和相对权重都随病例定义；原文没有提到的内容保持“未知”，只有计划明确列出的冲突表达才会标记为不匹配。这个初排只决定先读哪篇，不代表临床相似度。
 
+需要进一步改善前排顺序时，可以选择在本地运行 MedCPT cross-encoder，对初排后的候选前缀重新打分。必需特征、明确冲突、是否为病例报告和题名关键特征仍作为排序护栏，模型只在这些信号相当的候选中细排；模型原始分数不会被解释成诊断概率。默认不安装也不启用这个较重的可选依赖。
+
 ### 7. 检查每条结论有没有原文支持
 
 题目能证明的内容很少，摘要和全文也不能混为一谈。报告会标明一条判断实际来自题目、摘要、全文、教学页面还是二次转述，并尽量回到原始病例。
@@ -126,6 +128,58 @@ PubMed 和 Europe PMC 是英文医学文献的主干。OpenAlex 用来扩大候�
 每条入选病例会保留原文标题、年份和稳定链接，并说明目前核对到了题目、摘要还是全文。病例之间的相同点和差异分开写；没有查到、无法访问和原文未说明，也会分开写。
 
 报告末尾会留下本次检索的范围。它不会把“查了几个常用来源”写成“找到了全部病例”。
+
+## 小规模公开案例测试
+
+仓库包含 PMC-Patients 论文附录中的 3 个公开案例，用于检查查询计划、跨来源去重和候选排序是否稳定。先做不联网的计划校验：
+
+```bash
+python3 scripts/benchmark_case_studies.py --dry-run --pretty
+```
+
+联网测试一个案例：
+
+```bash
+python3 scripts/benchmark_case_studies.py \
+  --cases pmc-case-1-diagnosis \
+  --limit 20 \
+  --pretty
+```
+
+联网测试全部 3 个案例：
+
+```bash
+python3 scripts/benchmark_case_studies.py --limit 20 --pretty
+```
+
+启用本地 MedCPT reranker：
+
+```bash
+python3 -m pip install -r requirements-reranker.txt
+python3 scripts/benchmark_case_studies.py \
+  --cases pmc-case-1-diagnosis \
+  --limit 20 \
+  --reranker medcpt \
+  --rerank-top-k 50 \
+  --pretty
+```
+
+模型默认使用 `ncbi/MedCPT-Cross-Encoder`。程序会记录请求与实际解析到的模型 revision、设备、批大小、截断长度、每篇候选的原始 logit 以及 rerank 前后名次。模型或依赖不可用时默认保留原排名并将状态写成 `skipped`；需要在 CI 中严格失败时加 `--reranker-required`。模型只在本机处理已去标识化的病例指纹和当前检索到的题名/摘要，但首次使用仍需联网下载模型文件。
+
+如果使用已授权的 SiliconFlow API，则不需要安装 PyTorch：
+
+```bash
+export SILICONFLOW_API_KEY='在本机 shell 中设置，不要提交到 git'
+python3 scripts/benchmark_case_studies.py \
+  --cases pmc-case-1-diagnosis \
+  --reranker siliconflow \
+  --rerank-top-k 50 \
+  --pretty
+```
+
+也可以复制 [.env.example](/Users/june/code/github/find-similar-medical-cases/.env.example) 为 `.env`。SiliconFlow 模型默认是 `BAAI/bge-reranker-v2-m3`，请求会把去标识化病例指纹以及候选题名/摘要发送到远程服务；使用前应确认机构的数据出境、隐私和服务条款要求。API key 只从环境变量或被 git 忽略的 `.env` 读取，不会写入结果 JSON、Markdown 或错误信息。
+
+这只是实时 API 冒烟测试，不是完整 PMC-Patients benchmark。附录给出的每例 5 篇论文是论文中的 BM25 案例展示结果，并非穷尽的相关性标注，因此脚本只报告“参考 Top 5 重合度”和参考论文排名，不能把它称为 recall。实时结果还会随 PubMed、Europe PMC 和 OpenAlex 的索引变化。
 
 ## 还可以这样问
 

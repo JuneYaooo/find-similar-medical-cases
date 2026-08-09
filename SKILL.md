@@ -21,6 +21,10 @@ Resolve the directory containing this `SKILL.md` as the Skill directory. Read re
    python3 scripts/run_search_plan.py --plan /tmp/case-search-plan.json --mode comprehensive --limit 20 --max-api-searches 30 --workers 4 --output-root '/absolute/user/workspace/output' --output-label '<de-identified-brief>' --pretty
    ```
 
+   When the optional dependencies in `requirements-reranker.txt` and the local model are available, add `--reranker medcpt --rerank-top-k 50` to rerank the initial candidate prefix with `ncbi/MedCPT-Cross-Encoder`. Keep required-feature, explicit-mismatch, actual-case, and title-feature guardrails ahead of the model signal. Record the requested and resolved model revision, raw logit, input evidence scope, and before/after rank. Use `--reranker-required` only when failure should abort the run; otherwise preserve the pre-reranker order and report `skipped`. Never present a reranker logit as a probability or validated clinical similarity.
+
+   When the user has authorized a remote provider and the case has been de-identified, `--reranker siliconflow` may use `BAAI/bge-reranker-v2-m3` through `SILICONFLOW_API_KEY`. Treat the provider as an external processing route: record endpoint, model, request status, and evidence scope; never store or print the key; and report privacy, data-transfer, availability, and cost limitations. Use the same required-feature, explicit-mismatch, actual-case, and title-feature guardrails and fallback semantics as the local reranker.
+
    Use `scripts/search_cases.py` only for a deliberately quick single-query pass. Do not call a quick pass comprehensive.
 
 6. Generate browser searches for sources without a supported API:

@@ -191,6 +191,10 @@ Use three complementary sets:
 
 Public benchmarks test literature relevance, not patient-level clinical equivalence, so the internal set is essential.
 
+For a fast repository-level regression check, use the three published case studies in the PMC-Patients supplementary material. Run `scripts/benchmark_case_studies.py` against the live PubMed, Europe PMC, and OpenAlex APIs, and record the published BM25 Top 5 reference overlap, reference ranks, query-route success, and feature-complete candidates at 10. This is a smoke test of the current title/abstract retrieval pipeline, not the full PMC-Patients patient-summary benchmark. The five displayed references per case are not exhaustive qrels, so call this metric reference Top 5 overlap, never recall.
+
+Run the same fixed live retrieval once without reranking and once with `ncbi/MedCPT-Cross-Encoder` or the authorized SiliconFlow `BAAI/bge-reranker-v2-m3` over the same pre-reranker candidate prefix. Compare reference ranks, nDCG/MRR only where judgments permit them, top-k churn, latency, remote cost, and failure rate. Persist raw logits/provider scores and before/after ranks, but do not compare scores across different model revisions or providers as calibrated scores. Explicit required-feature matches, configured contradictions, actual-case signals, and title evidence remain guardrails rather than inputs that the cross-encoder may silently override. Remote providers must be separately labeled in provenance and privacy/data-transfer accounting.
+
 ### Metrics
 
 Measure by source class and overall:
@@ -228,6 +232,9 @@ This shows whether added complexity improves relevant-case recall instead of onl
 - parallel source execution with provider-specific concurrency limits;
 - query-run coverage and marginal-yield ledger;
 - DOI/PMID/PMCID/title deduplication;
+- RRF fusion of provider/query-local ranks plus plan-defined feature triage;
+- optional local MedCPT cross-encoder reranking of a bounded candidate prefix, with graceful fallback and model provenance;
+- optional authorized SiliconFlow `BAAI/bge-reranker-v2-m3` API reranking, with HTTPS-only transport, secret isolation, and provider-specific provenance;
 - PubMed Similar Articles plus OpenAlex references/citations/related works;
 - browser plans for Chinese/specialty sources;
 - bounded TikHub connector and source-class separation.
@@ -242,7 +249,7 @@ This shows whether added complexity improves relevant-case recall instead of onl
 ### V3 — hybrid biomedical retrieval
 
 - MedCPT document embeddings and versioned index manifest;
-- RRF fusion and a biomedical reranker;
+- RRF fusion across lexical, dense, official-similarity, and graph rankings plus a biomedical reranker;
 - structured clinical feature extractor with explicit unknown values;
 - benchmark harness and ablation reports.
 
@@ -266,6 +273,7 @@ Accessed 2026-08-03 unless otherwise stated.
 - Hugging Face, Open Deep Research with smolagents: <https://huggingface.co/learn/cookbook/en/open_deep_research>
 - DeepResearch Bench, RACE and FACT evaluation: <https://arxiv.org/abs/2506.11763>
 - MedCPT: Jin et al., *Bioinformatics* (2023), DOI <https://doi.org/10.1093/bioinformatics/btad651>
+- NCBI MedCPT Cross-Encoder model: <https://huggingface.co/ncbi/MedCPT-Cross-Encoder>
 - MIRAGE/MedRAG: Xiong et al., ACL Findings (2024), DOI <https://doi.org/10.18653/v1/2024.findings-acl.372>
 - BMRetriever: Xu et al., EMNLP (2024), DOI <https://doi.org/10.18653/v1/2024.emnlp-main.1241>
 - RELISH benchmark: Brown et al., *Database* (2019), DOI <https://doi.org/10.1093/database/baz085>

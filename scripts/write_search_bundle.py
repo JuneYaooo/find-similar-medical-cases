@@ -101,6 +101,7 @@ def render_feature_table(record: Dict[str, Any]) -> List[str]:
 def render_case(record: Dict[str, Any], rank: int) -> str:
     evidence = record.get("feature_evidence") or {}
     retrieval = record.get("retrieval_support") or {}
+    reranker = record.get("reranker") or {}
     identifiers = ", ".join(
         f"{label}: {record[field]}"
         for field, label in (("doi", "DOI"), ("pmid", "PMID"), ("pmcid", "PMCID"))
@@ -125,6 +126,11 @@ def render_case(record: Dict[str, Any], rank: int) -> str:
         f"| 可访问范围 | {markdown_cell(record.get('access_scope'))} |",
         f"| 当前证据范围 | {markdown_cell(record.get('retrieved_evidence_scope'))} |",
         f"| 检索可信度 | {markdown_cell(retrieval.get('retrieval_confidence'))} |",
+        f"| RRF 融合分 | {markdown_cell(retrieval.get('rrf_score'))} |",
+        f"| 最佳来源内排名 | {markdown_cell(retrieval.get('best_source_rank'))} |",
+        f"| Reranker 模型 | {markdown_cell(reranker.get('model'))} |",
+        f"| Reranker 原始分 | {markdown_cell(reranker.get('score'))} |",
+        f"| Reranker 前后排名 | {markdown_cell(reranker.get('pre_reranker_rank'))} → {markdown_cell(reranker.get('post_reranker_rank'))} |",
         f"| 命中来源 | {markdown_cell(record.get('found_via'))} |",
         f"| 命中查询 | {markdown_cell(record.get('matched_queries'))} |",
         "",
@@ -225,12 +231,15 @@ def render_overall_report(
     selection = accounting.get("selection_reporting") or {}
     dimensions = (accounting.get("dimension_summary") or {}).get("dimensions", [])
     coverage = payload.get("coverage") or []
+    reranker = payload.get("reranker") or {}
     lines = [
         "# 总体搜索结果",
         "",
         f"- 检索 ID：{plain_text(payload.get('case_id')) or '未提供'}",
         f"- 检索时间：{plain_text(payload.get('retrieved_at')) or '未知'}",
         f"- 模式：{plain_text(payload.get('mode')) or '未知'}",
+        f"- Reranker：{markdown_cell(reranker.get('status'))}；模型 {markdown_cell(reranker.get('model'))}；评分候选 {markdown_cell(reranker.get('candidates_scored'))}。",
+        "- Reranker 分数是候选前缀内的原始排序信号，不是诊断概率或临床相似度概率。",
         "- 统计范围：当前文件的自动统计默认覆盖 live API 阶段；其他实际执行路径应在最终核验时补充。",
         "",
         "## 路径统计",
@@ -301,14 +310,14 @@ def render_overall_report(
             "",
             "## 排序后的候选文献",
             "",
-            "| 排名 | 候选 | 年份 | 特征匹配分 | 必需特征覆盖 | 来源质量 | 当前证据范围 |",
-            "|---:|---|---:|---:|---:|---|---|",
+            "| 排名 | 候选 | 年份 | 特征匹配分 | 必需特征覆盖 | Reranker | RRF | 来源质量 | 当前证据范围 |",
+            "|---:|---|---:|---:|---:|---:|---:|---|---|",
         ]
     )
     for rank, (record, relative_path) in enumerate(case_files, start=1):
         evidence = record.get("feature_evidence") or {}
         lines.append(
-            "| {rank} | [{title}]({path}) | {year} | {score} | {required} | {quality} | {scope} |".format(
+            "| {rank} | [{title}]({path}) | {year} | {score} | {required} | {reranker} | {rrf} | {quality} | {scope} |".format(
                 rank=rank,
                 title=markdown_cell(record.get("title")),
                 path=relative_path,
@@ -316,6 +325,10 @@ def render_overall_report(
                 score=format_score(evidence.get("evidence_match_percent"), "/100"),
                 required=format_score(
                     evidence.get("required_evidence_match_percent"), "%"
+                ),
+                reranker=markdown_cell((record.get("reranker") or {}).get("score")),
+                rrf=markdown_cell(
+                    (record.get("retrieval_support") or {}).get("rrf_score")
                 ),
                 quality=markdown_cell(record.get("source_quality")),
                 scope=markdown_cell(record.get("retrieved_evidence_scope")),
