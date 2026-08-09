@@ -14,6 +14,7 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 
@@ -43,6 +44,38 @@ class SearchError(RuntimeError):
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def env_value(name: str) -> str | None:
+    """Read an environment variable, with a minimal ignored .env fallback.
+
+    The .env parser only reads lines matching KEY=VALUE (optionally prefixed
+    with ``export ``); comments and blank lines are skipped. Values are
+    trimmed of surrounding quotes so the parser stays small and predictable.
+    """
+
+    value = os.environ.get(name)
+    if value:
+        return value.strip().strip('"').strip("'") or None
+    candidates = [Path.cwd() / ".env", Path(__file__).resolve().parents[1] / ".env"]
+    seen = set()
+    for path in candidates:
+        if path in seen or not path.is_file():
+            continue
+        seen.add(path)
+        try:
+            for line in path.read_text(encoding="utf-8").splitlines():
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#"):
+                    continue
+                if stripped.startswith("export "):
+                    stripped = stripped[7:].lstrip()
+                key, separator, candidate = stripped.partition("=")
+                if separator and key.strip() == name:
+                    return candidate.strip().strip('"').strip("'") or None
+        except OSError:
+            continue
+    return None
 
 
 def compact(value: Optional[str]) -> Optional[str]:
@@ -91,7 +124,11 @@ def detect_sensitive_query(query: str) -> List[str]:
         "email": r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
         "mainland China phone number": r"(?<!\d)1[3-9]\d{9}(?!\d)",
         "mainland China national identifier": r"(?<!\d)\d{17}[0-9Xx](?!\d)",
-        "record or identity label": r"(?:姓名|身份证|住院号|病历号|门诊号|medical\s*record|patient\s*id|mrn)\s*[:：]",
+        "record or identity label": (
+            r"(?:姓名|身份证|住院号|病历号|门诊号|medical\s*record|patient\s*id|mrn)\s*[:：]"
+            r"|(?<![A-Za-z0-9])(?:身份证|住院号|病历号|门诊号|medical\s*record|patient\s*id|mrn)\s+"
+            r"(?:\d{3,}|[A-Za-z][A-Za-z0-9_-]{3,})(?![A-Za-z0-9])"
+        ),
         "address label": r"(?:家庭住址|现住址|详细地址|home\s+address|street\s+address)\s*[:：]",
         "passport label": r"(?:护照号|passport\s*(?:number|no\.?))\s*[:：]",
         "exact calendar date": r"(?<!\d)(?:19|20)\d{2}[-/.年](?:0?[1-9]|1[0-2])[-/.月](?:0?[1-9]|[12]\d|3[01])日?(?!\d)",
@@ -587,18 +624,6 @@ def crossref_search(
     return effective_query, int(message.get("total-results", 0) or 0), records
 
 
-def record_key(record: Dict[str, Any]) -> str:
-    if record.get("doi"):
-        return f"doi:{normalize_doi(record['doi'])}"
-    if record.get("pmid"):
-        return f"pmid:{record['pmid']}"
-    if record.get("pmcid"):
-        return f"pmcid:{record['pmcid']}"
-    if normalized_title(record.get("title")):
-        return f"title:{normalized_title(record['title'])}"
-    return f"source:{record.get('source_name')}:{record.get('record_id')}"
-
-
 def record_aliases(record: Dict[str, Any]) -> set[str]:
     aliases: set[str] = set()
     if record.get("doi"):
@@ -633,9 +658,22 @@ def stable_identifier_conflict(left: Dict[str, Any], right: Dict[str, Any]) -> b
 
 
 def merge_record_values(current: Dict[str, Any], record: Dict[str, Any]) -> None:
-    for source in record.get("found_via", []):
-        if source not in current["found_via"]:
-            current["found_via"].append(source)
+    # Prefer the official literature API's provenance when a record surfaces it;
+    # it is the most authoritative identifier and retrieval attribution.
+    if (
+        record.get("source_class") == "official_literature_api"
+        and current.get("source_class") != "official_literature_api"
+    ):
+        for field in (
+            "source_name",
+            "source_class",
+            "retrieval_method",
+            "retrieved_at",
+            "record_id",
+            "url",
+        ):
+            if record.get(field):
+                current[field] = record[field]
     for field in (
         "pmid",
         "pmcid",
@@ -661,8 +699,13 @@ def merge_record_values(current: Dict[str, Any], record: Dict[str, Any]) -> None
     ) > evidence_priority.get(current.get("retrieved_evidence_scope"), 0):
         current["retrieved_evidence_scope"] = record["retrieved_evidence_scope"]
     current["authors"] = current.get("authors") or record.get("authors", [])
-    current["publication_types"] = sorted(
-        set(current.get("publication_types", []) + record.get("publication_types", []))
+    for field in ("found_via", "publication_types", "matched_queries", "query_intents"):
+        current[field] = sorted(set(current.get(field, []) + record.get(field, [])))
+    current["relations_to_seed"] = sorted(
+        set(current.get("relations_to_seed", []) + record.get("relations_to_seed", []))
+    )
+    current["source_occurrences"] = current.get("source_occurrences", []) + record.get(
+        "source_occurrences", []
     )
     promote_source_quality(current, record)
 

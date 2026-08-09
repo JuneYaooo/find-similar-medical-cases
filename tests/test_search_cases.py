@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import unittest
 import urllib.error
@@ -35,6 +36,49 @@ class SearchCasesTests(unittest.TestCase):
         self.assertIn("record or identity label", labels)
         self.assertIn("address label", labels)
         self.assertIn("exact calendar date", labels)
+
+    def test_sensitive_query_detects_record_labels_without_colon(self) -> None:
+        for query in (
+            "住院号 123456",
+            "病历号 abc123",
+            "身份证 110101199003078888",
+            "mrn 12345",
+            "patient id 123456",
+            "medical record 98765",
+        ):
+            with self.subTest(query=query):
+                self.assertIn(
+                    "record or identity label", sc.detect_sensitive_query(query)
+                )
+
+    def test_sensitive_query_allows_deidentified_case_concepts(self) -> None:
+        for query in (
+            "hospice care chronic kidney disease case report",
+            "住院 老年 慢性肾病 病例",
+            "MR 检查 头痛 病例",
+            "mrn 相关文献",
+        ):
+            with self.subTest(query=query):
+                self.assertEqual(sc.detect_sensitive_query(query), [])
+
+    def test_env_value_parses_dotenv_and_prefers_environment(self) -> None:
+        env_text = (
+            "# comment\n"
+            "PLAIN=value1\n"
+            "export QUOTED=\"value two\"\n"
+            "TIKHUB_API_KEY=file-key\n"
+        )
+        with mock.patch.object(sc.Path, "is_file", return_value=True), mock.patch.object(
+            sc.Path, "read_text", return_value=env_text
+        ), mock.patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(sc.env_value("PLAIN"), "value1")
+            self.assertEqual(sc.env_value("QUOTED"), "value two")
+            self.assertEqual(sc.env_value("TIKHUB_API_KEY"), "file-key")
+            self.assertIsNone(sc.env_value("MISSING"))
+        with mock.patch.object(sc.Path, "is_file", return_value=True), mock.patch.object(
+            sc.Path, "read_text", return_value=env_text
+        ), mock.patch.dict(os.environ, {"TIKHUB_API_KEY": "env-key"}):
+            self.assertEqual(sc.env_value("TIKHUB_API_KEY"), "env-key")
 
     def test_source_quality_only_promotes_actual_case_reports(self) -> None:
         self.assertEqual(

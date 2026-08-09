@@ -7,7 +7,6 @@ import argparse
 import hashlib
 import html
 import json
-import os
 import re
 import sys
 import time
@@ -16,6 +15,8 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional
+
+import search_cases as sc
 
 
 SEARCH_PATH = "/api/v1/wechat_search/v2/fetch_search"
@@ -48,26 +49,13 @@ def clean_html(value: Any) -> Optional[str]:
     return compact(html.unescape(re.sub(r"<[^>]+>", "", text)))
 
 
-def detect_sensitive_query(query: str) -> List[str]:
-    checks = {
-        "email": r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
-        "mainland China phone number": r"(?<!\d)1[3-9]\d{9}(?!\d)",
-        "mainland China national identifier": r"(?<!\d)\d{17}[0-9Xx](?!\d)",
-        "record or identity label": r"(?:姓名|身份证|住院号|病历号|门诊号|medical\s*record|patient\s*id|mrn)\s*[:：]",
-        "address label": r"(?:家庭住址|现住址|详细地址|home\s+address|street\s+address)\s*[:：]",
-        "passport label": r"(?:护照号|passport\s*(?:number|no\.?))\s*[:：]",
-        "exact calendar date": r"(?<!\d)(?:19|20)\d{2}[-/.年](?:0?[1-9]|1[0-2])[-/.月](?:0?[1-9]|[12]\d|3[01])日?(?!\d)",
-    }
-    return [
-        label for label, pattern in checks.items() if re.search(pattern, query, re.I)
-    ]
-
-
 def validate_query(query: str) -> str:
     query = compact(query) or ""
     if not query:
         raise TikHubError("query must not be empty")
-    sensitive = detect_sensitive_query(query)
+    # Shared privacy guard from search_cases.py; keep a single implementation so
+    # the regex cannot drift between the scripts that rely on it.
+    sensitive = sc.detect_sensitive_query(query)
     if sensitive:
         raise TikHubError(
             "query may contain sensitive identifiers: "
@@ -489,7 +477,8 @@ def add_search_options(parser: argparse.ArgumentParser) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--base-url", default=os.getenv("TIKHUB_BASE_URL", "https://api.tikhub.io")
+        "--base-url",
+        default=sc.env_value("TIKHUB_BASE_URL") or "https://api.tikhub.io",
     )
     parser.add_argument("--timeout", type=int, default=45)
     parser.add_argument(
@@ -569,7 +558,7 @@ def main() -> int:
         if args.dry_run:
             output = dry_run_plan(args, base_url)
         else:
-            token = os.getenv("TIKHUB_API_KEY")
+            token = sc.env_value("TIKHUB_API_KEY")
             if not token:
                 raise TikHubError(
                     "set TIKHUB_API_KEY or use --dry-run; never put the token in command arguments"

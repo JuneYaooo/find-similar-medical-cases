@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import search_cases as sc
+import rerank_candidates as rc
 import write_search_bundle as wsb
 
 
@@ -36,6 +37,7 @@ CORE_INTENTS = {
 }
 BROWSER_GROUPS = {"chinese", "journals", "specialty", "wechat"}
 EVIDENCE_FIELDS = {"title", "abstract", "journal", "publication_types"}
+RRF_K = 60
 
 
 class PlanError(RuntimeError):
@@ -373,97 +375,34 @@ def aliases(record: Dict[str, Any]) -> Set[str]:
     return sc.record_aliases(record)
 
 
-def merge_values(target: Dict[str, Any], source: Dict[str, Any]) -> None:
-    if (
-        source.get("source_class") == "official_literature_api"
-        and target.get("source_class") != "official_literature_api"
-    ):
-        for field in (
-            "source_name",
-            "source_class",
-            "retrieval_method",
-            "retrieved_at",
-            "record_id",
-            "url",
-        ):
-            if source.get(field):
-                target[field] = source[field]
-    for field in (
-        "pmid",
-        "pmcid",
-        "doi",
-        "title",
-        "journal",
-        "year",
-        "url",
-        "full_text_url",
-        "license",
-    ):
-        if not target.get(field) and source.get(field):
-            target[field] = source[field]
-    if len(source.get("abstract") or "") > len(target.get("abstract") or ""):
-        target["abstract"] = source["abstract"]
-    if source.get("open_access") is True:
-        target["open_access"] = True
-    if source.get("access_scope") == "open_full_text":
-        target["access_scope"] = "open_full_text"
-    evidence_priority = {"metadata": 0, "title": 1, "abstract": 2, "full_text": 3}
-    if evidence_priority.get(
-        source.get("retrieved_evidence_scope"), 0
-    ) > evidence_priority.get(target.get("retrieved_evidence_scope"), 0):
-        target["retrieved_evidence_scope"] = source["retrieved_evidence_scope"]
-    target["authors"] = target.get("authors") or source.get("authors", [])
-    for field in ("found_via", "publication_types", "matched_queries", "query_intents"):
-        target[field] = sorted(set(target.get(field, []) + source.get(field, [])))
-    target["relations_to_seed"] = sorted(
-        set(target.get("relations_to_seed", []) + source.get("relations_to_seed", []))
-    )
-    target["source_occurrences"] = target.get("source_occurrences", []) + source.get(
-        "source_occurrences", []
-    )
-    sc.promote_source_quality(target, source)
-
-
 def merge_with_aliases(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    grouped: List[Dict[str, Any]] = []
-    grouped_aliases: List[Set[str]] = []
-    for record in records:
-        record_aliases = aliases(record)
-        matching = [
-            index
-            for index, known in enumerate(grouped_aliases)
-            if record_aliases & known
-            and not sc.stable_identifier_conflict(grouped[index], record)
-        ]
-        if not matching:
-            grouped.append(record.copy())
-            grouped_aliases.append(set(record_aliases))
-            continue
-        target_index = matching[0]
-        target = grouped[target_index]
-        merge_values(target, record)
-        grouped_aliases[target_index].update(record_aliases)
-        for index in reversed(matching[1:]):
-            duplicate = grouped[index]
-            if sc.stable_identifier_conflict(target, duplicate):
-                continue
-            grouped.pop(index)
-            duplicate_aliases = grouped_aliases.pop(index)
-            grouped_aliases[target_index].update(duplicate_aliases)
-            merge_values(target, duplicate)
-    return grouped
+    """Deduplicate records by identifier and title-year-author aliases.
+
+    Delegates to the shared implementation in search_cases.py so dedup logic
+    cannot drift between the scripts that rely on it.
+    """
+
+    return sc.merge_records(records)
 
 
-def tag_record(record: Dict[str, Any], query: Dict[str, Any]) -> Dict[str, Any]:
+def tag_record(
+    record: Dict[str, Any],
+    query: Dict[str, Any],
+    source_key: str,
+    source_rank: int,
+) -> Dict[str, Any]:
     tagged = record.copy()
     tagged["matched_queries"] = [query["id"]]
     tagged["query_intents"] = [query["intent"]]
     tagged["source_occurrences"] = [
         {
+            "source_key": source_key,
             "source_name": record.get("source_name"),
             "record_id": record.get("record_id"),
             "url": record.get("url"),
             "query_id": query["id"],
+            "query_intent": query["intent"],
+            "rank": source_rank,
         }
     ]
     return tagged
@@ -494,8 +433,10 @@ def contains_evidence_term(text: str, term: str) -> bool:
 def first_feature_evidence(
     field_text: Dict[str, str], terms: List[str], fields: List[str]
 ) -> Optional[Dict[str, str]]:
-    for term in terms:
-        for field in fields:
+    # Prefer stronger fields (normally title before abstract) even when the
+    # matching title uses a later synonym from the configured term list.
+    for field in fields:
+        for term in terms:
             if contains_evidence_term(field_text.get(field, ""), term):
                 return {"term": term, "field": field}
     return None
@@ -512,6 +453,7 @@ def annotate_feature_evidence(
     details: List[Dict[str, Any]] = []
     matched_weight = 0.0
     mismatched_weight = 0.0
+    title_matched_weight = 0.0
     required_matched_weight = 0.0
     required_total_weight = 0.0
     status_counts = {"matched": 0, "mismatched": 0, "conflicting": 0, "unknown": 0}
@@ -531,11 +473,13 @@ def annotate_feature_evidence(
         else:
             status = "unknown"
         status_counts[status] += 1
-        if match:
+        if status == "matched":
             matched_weight += feature["weight"]
+            if match["field"] == "title":
+                title_matched_weight += feature["weight"]
             if feature["required"]:
                 required_matched_weight += feature["weight"]
-        if mismatch:
+        if status in {"mismatched", "conflicting"}:
             mismatched_weight += feature["weight"]
         if feature["required"]:
             required_total_weight += feature["weight"]
@@ -563,6 +507,8 @@ def annotate_feature_evidence(
         ),
         "matched_weight": matched_weight,
         "mismatched_weight": mismatched_weight,
+        "matched_feature_count": status_counts["matched"],
+        "title_matched_weight": title_matched_weight,
         "total_weight": total_weight,
         "evidence_match_percent": round(100 * matched_weight / total_weight, 2),
         "required_matched_weight": required_matched_weight,
@@ -578,25 +524,37 @@ def annotate_feature_evidence(
 
 
 def candidate_sort_key(
-    record: Dict[str, Any], use_feature_evidence: bool
+    record: Dict[str, Any], use_feature_evidence: bool, use_reranker: bool = False
 ) -> Tuple[Any, ...]:
     retrieval = record["retrieval_support"]
     retrieval_key = (
+        retrieval["rrf_score"],
         {"high": 2, "medium": 1, "discovery_only": 0}[
             retrieval["retrieval_confidence"]
         ],
         retrieval["matched_intent_count"],
         retrieval["matched_query_count"],
+        -(retrieval["best_source_rank"] or 10**9),
         record.get("year") or 0,
     )
+    reranker = record.get("reranker") or {}
+    reranker_key = (
+        (1, reranker["score"])
+        if use_reranker and isinstance(reranker.get("score"), (int, float))
+        else (0, float("-inf"))
+    )
     if not use_feature_evidence:
-        return retrieval_key
+        return (*reranker_key, *retrieval_key) if use_reranker else retrieval_key
     evidence = record["feature_evidence"]
     required_percent = evidence["required_evidence_match_percent"]
     return (
         required_percent if required_percent is not None else -1,
-        evidence["evidence_match_percent"],
         -evidence["mismatched_weight"],
+        retrieval["case_report_signal"],
+        evidence["title_matched_weight"],
+        *reranker_key,
+        evidence["evidence_match_percent"],
+        evidence["matched_feature_count"],
         *retrieval_key,
     )
 
@@ -748,6 +706,25 @@ def annotate_candidate(
     identifier = bool(record.get("doi") or record.get("pmid") or record.get("pmcid"))
     query_count = len(set(record.get("matched_queries", [])))
     intent_count = len(set(record.get("query_intents", [])))
+    ranked_occurrences: Dict[Tuple[str, str], int] = {}
+    for occurrence in record.get("source_occurrences", []):
+        source_key = str(
+            occurrence.get("source_key") or occurrence.get("source_name") or ""
+        )
+        query_id = str(occurrence.get("query_id") or "")
+        rank = occurrence.get("rank")
+        if (
+            not source_key
+            or not query_id
+            or isinstance(rank, bool)
+            or not isinstance(rank, int)
+            or rank < 1
+        ):
+            continue
+        key = (source_key, query_id)
+        ranked_occurrences[key] = min(rank, ranked_occurrences.get(key, rank))
+    ranks = list(ranked_occurrences.values())
+    rrf_score = sum(1.0 / (RRF_K + rank) for rank in ranks)
     if official and case_signal and identifier:
         retrieval_confidence = "high"
     elif identifier and (official or query_count >= 2):
@@ -761,6 +738,10 @@ def annotate_candidate(
         "stable_identifier": identifier,
         "matched_query_count": query_count,
         "matched_intent_count": intent_count,
+        "rank_fusion_method": f"rrf_k_{RRF_K}",
+        "ranked_occurrence_count": len(ranks),
+        "best_source_rank": min(ranks) if ranks else None,
+        "rrf_score": round(rrf_score, 8),
     }
     annotate_feature_evidence(record, features or [])
 
@@ -899,6 +880,28 @@ def main() -> int:
         "--output-label",
         help="De-identified brief used in the timestamped output directory name",
     )
+    parser.add_argument(
+        "--reranker",
+        choices=("none", "medcpt", "siliconflow"),
+        default="none",
+        help="Optional local or SiliconFlow cross-encoder reranker",
+    )
+    parser.add_argument("--reranker-model")
+    parser.add_argument("--reranker-revision")
+    parser.add_argument("--reranker-endpoint")
+    parser.add_argument("--rerank-top-k", type=int, default=50)
+    parser.add_argument("--reranker-batch-size", type=int, default=8)
+    parser.add_argument("--reranker-max-length", type=int, default=512)
+    parser.add_argument(
+        "--reranker-device",
+        choices=("auto", "cpu", "mps", "cuda"),
+        default="auto",
+    )
+    parser.add_argument(
+        "--reranker-required",
+        action="store_true",
+        help="Fail instead of preserving the pre-reranker order when reranking is unavailable",
+    )
     args = parser.parse_args()
     if not 1 <= args.limit <= 50:
         parser.error("--limit must be between 1 and 50")
@@ -908,6 +911,14 @@ def main() -> int:
         parser.error("--workers must be between 1 and 8")
     if not 1 <= args.timeout <= 300:
         parser.error("--timeout must be between 1 and 300 seconds")
+    if not 1 <= args.rerank_top_k <= 200:
+        parser.error("--rerank-top-k must be between 1 and 200")
+    if not 1 <= args.reranker_batch_size <= 64:
+        parser.error("--reranker-batch-size must be between 1 and 64")
+    if not 64 <= args.reranker_max_length <= 1024:
+        parser.error("--reranker-max-length must be between 64 and 1024")
+    if args.reranker_required and args.reranker == "none":
+        parser.error("--reranker-required requires --reranker medcpt or siliconflow")
     if args.output_label and not args.output_root:
         parser.error("--output-label requires --output-root")
     if args.output_label:
@@ -997,11 +1008,14 @@ def main() -> int:
 
     unique_before = 0
     for task, task_result in zip(scheduled_tasks, task_results):
-        query, _, entry = task
+        query, source, entry = task
         result, error = task_result
         if result is not None:
             effective_query, total, records = result
-            tagged = [tag_record(record, query) for record in records]
+            tagged = [
+                tag_record(record, query, source, rank)
+                for rank, record in enumerate(records, start=1)
+            ]
             raw_records.extend(tagged)
             unique_after = len(merge_with_aliases(raw_records))
             entry.update(
@@ -1023,6 +1037,80 @@ def main() -> int:
         key=lambda record: candidate_sort_key(record, bool(candidate_features)),
         reverse=True,
     )
+    reranker_summary: Dict[str, Any] = {
+        "status": "not_requested",
+        "backend": args.reranker,
+    }
+    reranker_model = args.reranker_model or (
+        rc.DEFAULT_SILICONFLOW_MODEL
+        if args.reranker == "siliconflow"
+        else rc.DEFAULT_MODEL
+    )
+    reranker_revision = args.reranker_revision or (
+        rc.DEFAULT_SILICONFLOW_REVISION
+        if args.reranker == "siliconflow"
+        else rc.DEFAULT_REVISION
+    )
+    reranker_endpoint = args.reranker_endpoint or rc.env_value(
+        "SILICONFLOW_RERANK_ENDPOINT"
+    ) or rc.DEFAULT_SILICONFLOW_ENDPOINT
+    if args.reranker in {"medcpt", "siliconflow"}:
+        try:
+            reranker_query = rc.build_case_query(plan)
+            scorer = (
+                rc.score_documents_siliconflow
+                if args.reranker == "siliconflow"
+                else rc.score_documents
+            )
+            reranker_summary = rc.rerank_records(
+                records,
+                reranker_query,
+                top_k=args.rerank_top_k,
+                model_name=reranker_model,
+                revision=reranker_revision,
+                batch_size=args.reranker_batch_size,
+                max_length=args.reranker_max_length,
+                device=(
+                    "remote" if args.reranker == "siliconflow" else args.reranker_device
+                ),
+                endpoint=reranker_endpoint,
+                scorer=scorer,
+            )
+            scored_count = reranker_summary["candidates_scored"]
+            prefix = records[:scored_count]
+            prefix.sort(
+                key=lambda record: candidate_sort_key(
+                    record, bool(candidate_features), True
+                ),
+                reverse=True,
+            )
+            records[:scored_count] = prefix
+            for post_rank, record in enumerate(prefix, start=1):
+                record["reranker"]["post_reranker_rank"] = post_rank
+        except rc.RerankerError as exc:
+            if args.reranker_required:
+                parser.error(f"reranker failed: {exc}")
+            reranker_summary = {
+                "status": "skipped",
+                "backend": args.reranker,
+                "model": reranker_model,
+                "requested_revision": reranker_revision,
+                "reason": str(exc),
+                "fallback": "preserved_pre_reranker_order",
+            }
+    if reranker_summary.get("status") == "applied":
+        candidate_ranking = (
+            "plan_defined_required_and_mismatch_guardrails_then_"
+            f"{args.reranker}_cross_encoder_then_feature_and_rrf_support"
+            if candidate_features
+            else f"{args.reranker}_cross_encoder_then_rrf_retrieval_support"
+        )
+    else:
+        candidate_ranking = (
+            "plan_defined_feature_evidence_then_rrf_retrieval_support"
+            if candidate_features
+            else "rrf_retrieval_support"
+        )
     output = {
         "case_id": plan.get("case_id"),
         "case_fingerprint": plan.get("case_fingerprint"),
@@ -1033,6 +1121,7 @@ def main() -> int:
         "api_query_plan": queries,
         "candidate_features": candidate_features,
         "selection_policy": selection_policy,
+        "reranker": reranker_summary,
         "plan_summary": {
             "api_queries": len(queries),
             "api_searches_scheduled": scheduled,
@@ -1047,11 +1136,10 @@ def main() -> int:
             "max_detailed_verified_cases": selection_policy[
                 "max_detailed_verified_cases"
             ],
-            "candidate_ranking": (
-                "plan_defined_feature_evidence_then_retrieval_support"
-                if candidate_features
-                else "retrieval_support"
-            ),
+            "candidate_ranking": candidate_ranking,
+            "rank_fusion": f"reciprocal_rank_fusion_k_{RRF_K}",
+            "reranker": reranker_summary.get("status"),
+            "reranker_model": reranker_summary.get("model"),
             "browser_queries_planned": len(plan.get("browser_queries") or []),
             "wechat_queries_planned": len(plan.get("wechat_queries") or []),
         },

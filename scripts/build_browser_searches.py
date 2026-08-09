@@ -11,24 +11,15 @@ import urllib.parse
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
+import search_cases as sc
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
-def detect_sensitive_query(query: str) -> List[str]:
-    checks = {
-        "email": r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
-        "mainland China phone number": r"(?<!\d)1[3-9]\d{9}(?!\d)",
-        "mainland China national identifier": r"(?<!\d)\d{17}[0-9Xx](?!\d)",
-        "record or identity label": r"(?:姓名|身份证|住院号|病历号|门诊号|medical\s*record|patient\s*id|mrn)\s*[:：]",
-        "address label": r"(?:家庭住址|现住址|详细地址|home\s+address|street\s+address)\s*[:：]",
-        "passport label": r"(?:护照号|passport\s*(?:number|no\.?))\s*[:：]",
-        "exact calendar date": r"(?<!\d)(?:19|20)\d{2}[-/.年](?:0?[1-9]|1[0-2])[-/.月](?:0?[1-9]|[12]\d|3[01])日?(?!\d)",
-    }
-    return [
-        label for label, pattern in checks.items() if re.search(pattern, query, re.I)
-    ]
+# detect_sensitive_query lives in search_cases.py; keep a single implementation so
+# the privacy guard cannot drift between the scripts that rely on it.
 
 
 def quote(value: str) -> str:
@@ -74,7 +65,7 @@ def main() -> int:
     query = re.sub(r"\s+", " ", args.query).strip()
     if not query:
         parser.error("--query must not be empty")
-    sensitive = detect_sensitive_query(query)
+    sensitive = sc.detect_sensitive_query(query)
     if sensitive:
         parser.error(
             "query may contain sensitive identifiers: "
