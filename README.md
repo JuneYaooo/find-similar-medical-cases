@@ -2,136 +2,136 @@
 
 # Find Similar Medical Cases
 
-一个面向医学研究人员的中英文相似病例检索 Skill，由 Codex 执行可复现的检索、核验、比较和证据整理。
+A bilingual (Chinese/English) similar-medical-case retrieval skill for medical researchers, executed by Codex to run reproducible search, verification, comparison, and evidence synthesis.
 
-查病例时，麻烦的往往不是搜到一篇论文，而是换几种说法继续找、顺着参考文献追下去、排掉重复结果，再判断两份病例究竟像不像。这个项目把这些步骤交给 Codex 完成，最后留下可核对的来源和检索范围。
+Searching for cases is rarely as simple as finding one paper. The hard parts are rephrasing the query several ways, following reference chains, deduplicating results, and judging whether two cases actually resemble each other. This project hands those steps to Codex and leaves behind verifiable sources and an explicit search scope.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 
-## 适合谁
+## Who it is for
 
-项目主要服务于医学研究人员，也适合临床医生、病例报告作者和医学信息检索人员开展病例回顾、病例讨论准备、研究选题探索和相似病例证据整理。它强调可复核的检索路径、患者级去重和原文证据，不把检索结果直接当作诊断或治疗建议。
+The project primarily serves medical researchers, and is also useful to clinicians, case-report authors, and medical information specialists for case review, case-discussion preparation, research-topic exploration, and similar-case evidence synthesis. It emphasizes auditable search routes, patient-level deduplication, and evidence from the original source — search results are never presented as diagnosis or treatment advice.
 
-除非使用者明确限定语言或只要求快速初查，完整检索默认同时规划主要英文和中文病例来源。英文以 PubMed、Europe PMC 和主要病例期刊为主，中文以中国临床案例成果数据库（CMCR）、SinoMed、中国知网、万方、维普和中华医学期刊网等为主；无法访问或需要订阅的来源会明确记录，不能悄悄省略。这里的“覆盖”指执行并报告这些主要检索路径，不代表能够证明找到了所有已发表或未发表病例。
+Unless the user explicitly restricts the language or asks only for a quick initial pass, a full search plans the major English and Chinese case sources together by default. English coverage leans on PubMed, Europe PMC, and the major case-report journals; Chinese coverage leans on the China Clinical Case Repository (CMCR), SinoMed, CNKI, Wanfang, VIP, and the Chinese Medical Journal Network. Sources that are inaccessible or behind a subscription are recorded explicitly, never silently dropped. "Coverage" here means these primary search routes were executed and reported, not that all published or unpublished cases were proven to be found.
 
-## 怎么用
+## How to use
 
-先在 Codex 中发送：
+First, send this in Codex:
 
-> 请安装这个 Skill：https://github.com/JuneYaooo/find-similar-medical-cases
+> Please install this skill: https://github.com/JuneYaooo/find-similar-medical-cases
 
-安装完成后，新开一个对话，把已经去除身份信息的病例告诉它：
+After installation, open a new conversation and describe the already-de-identified case:
 
-> 帮我找相似病例：成年患者使用泊沙康唑后出现高血压、低钾、代谢性碱中毒、低肾素和低醛固酮。请说明每篇病例的相同点、差异，以及你实际查过哪些来源。
+> Help me find similar cases: an adult patient developed hypertension, hypokalemia, metabolic alkalosis, low renin, and low aldosterone after posaconazole. Explain the similarities and differences for each case, and which sources you actually searched.
 
-不需要先整理成专业检索式。年龄范围、症状出现顺序、关键检查、用药或暴露、治疗反应，这些信息比一段完整病历更有用。资料不够时，Codex 会继续问。
+You do not need to craft a professional search string first. Age range, symptom order, key findings, medication or exposure, and treatment response are more useful than a full medical record. When information is insufficient, Codex asks follow-up questions.
 
-完整检索会在当前工作区的 `output` 目录生成一个以去标识化简述和 UTC 时间戳命名的结果包：`search-report.md` 保存总体报告，`search-results.json` 保存可复现的检索账本，`cases/` 为每篇排序后的候选文献保存独立资料页。候选资料页在逐篇核验前不会被标记成独立患者病例。
+A full search writes a result bundle named after a de-identified brief and a UTC timestamp into the `output` directory of the current workspace: `search-report.md` holds the overall report, `search-results.json` holds the reproducible search ledger, and `cases/` holds an individual page for each ranked candidate. Candidate pages are not labeled as distinct patient cases until they have been verified one by one.
 
-检索和核验不会为了凑满或不超过某个病例数而提前停止。最终详细展示量可以在病例计划中单独配置，例如设置为 50：患者级核验后不超过 50 个相似病例时全部展示，超过时详细展示排序和代表性更高的 50 个，其余合格病例继续保留在补充清单和机器结果中。这个机制按实际合格病例量触发，不维护写死的“常见病/罕见病”名单。
+Search and verification never stop early just to hit or stay under a fixed number of cases. The number of detailed final displays is separately configurable in the case plan — for example 50: when patient-level verification yields no more than 50 similar cases, all are shown; when there are more, the 50 with the best ranking and representativeness are shown in detail, while the remaining qualifying cases stay in the supplementary list and machine-readable results. This mechanism is triggered by the actual count of qualifying cases; it does not maintain a hardcoded "common/rare disease" list.
 
-## 它做了哪些事
+## What it does
 
-- 根据临床表现、检查、用药和时间关系组织不同的查找方式，而不是只搜一个诊断名称。
-- 完整检索同时覆盖主要英文和中文病例路径：PubMed、Europe PMC、OpenAlex，以及 CMCR、SinoMed、中国知网、万方、维普、中华医学期刊网等可用入口。
-- 从一篇较接近的论文继续查相似文章、参考文献和后续引用。
-- 用 DOI、PMID、标题和作者等信息排除重复记录。
-- 逐项比较相同点、重要差异和原文没有交代的内容。
-- 记录哪些来源查过、哪些受限或失败，以及为什么停止继续查找。
+- Organizes different search angles from clinical presentation, findings, medications, and timing, rather than searching a single diagnosis name.
+- Covers the major English and Chinese case routes in a full search: PubMed, Europe PMC, OpenAlex, plus available entrances such as CMCR, SinoMed, CNKI, Wanfang, VIP, and the Chinese Medical Journal Network.
+- Follows similar articles, references, and later citations from a close candidate paper.
+- Removes duplicate records by DOI, PMID, title, and author.
+- Compares, point by point, the similarities, important differences, and what the original text does not state.
+- Records which sources were searched, which were limited or failed, and why searching stopped.
 
-重点不是给出一个看起来精确的“相似度”，而是把判断依据摊开，让人可以回到原文复核。
+The point is not to produce a seemingly precise "similarity score," but to lay the reasoning open so a human can return to the original text and verify it.
 
-## 查询逻辑
+## How the search works
 
-一句话概括：**先从多个方向尽量找全，再逐条核对和比较。**
+In one sentence: **cast a wide net in several directions first, then verify and compare each hit.**
 
-这不是让 Codex 看到一个诊断名称后自由搜索。实际工作分成两层：Codex 负责理解病例、补充同义词、决定下一步查什么，以及阅读和比较证据；固定的检索层负责执行查询、记录每次命中、统一文献信息、去重和追踪引用。这样既保留了语言理解能力，也留下了可以复查的检索记录。
+Codex does not free-search once it sees a diagnosis name. Work is split into two layers: Codex understands the case, adds synonyms, decides what to search next, and reads and compares evidence; a fixed retrieval layer executes queries, records every hit, normalizes bibliographic data, deduplicates, and tracks citations. This keeps language understanding while leaving an auditable search record.
 
-![相似病例查询逻辑](./assets/search-logic.svg)
+![Similar-case search logic](./assets/search-logic.svg)
 
-### 1. 把病例整理成“病例指纹”
+### 1. Build a "case fingerprint"
 
-开始检索前，先删除身份信息，再从叙述中留下真正影响查找的内容：年龄范围、主要表现、病程、关键阳性和阴性检查、影像或病理、用药或暴露、治疗反应和结局。
+Before searching, remove identifying information, then keep only what actually affects retrieval from the narrative: age range, main presentation, disease course, key positive and negative findings, imaging or pathology, medication or exposure, treatment response, and outcome.
 
-已经观察到的事实和怀疑的诊断会分开记录。这样即使最初的诊断猜错了，也不会把检索带进一个过窄的方向。通常还会挑出 2～6 个最有辨识度的特征，作为后续组合查询的重点。
+Observed facts and suspected diagnoses are recorded separately. Even if the initial diagnosis is wrong, this keeps the search from being steered into too narrow a direction. Usually 2–6 of the most discriminating features are selected as the focus for subsequent combined queries.
 
-### 2. 同一病例拆成多条检索路径
+### 2. Split the case into multiple search routes
 
-一大段完整病历通常搜不好，所以会拆成几组相互独立的查找方式：
+A long full record usually does not search well, so it is split into several mutually independent angles:
 
-- **高精度路径**：罕见表现、特殊检查或药物暴露的组合。
-- **表现优先路径**：只看症状、病程和检查，暂时不带诊断名称。
-- **诊断与鉴别路径**：分别尝试主要怀疑和可能的替代诊断。
-- **宽泛路径**：加入旧病名、缩写、拼写差异和近义词，并保留一次不限定“病例报告”的查找。
-- **补充分支**：病理、影像、治疗反应、不良反应，以及需要时的中文表达。
+- **High-precision route**: combinations of rare findings, special tests, or medication exposure.
+- **Presentation-first route**: symptoms, course, and findings only, without a diagnosis name for now.
+- **Diagnosis-and-differential route**: tries the primary suspicion and plausible alternative diagnoses separately.
+- **Broad route**: adds old terms, abbreviations, spelling variants, and synonyms, and keeps one search not restricted to "case report".
+- **Supplementary branches**: pathology, imaging, treatment response, adverse reactions, and Chinese phrasing when needed.
 
-同一篇论文如果被几条不同路径找到，说明它的检索线索比较稳定；这不代表它在临床上一定更相似。
+If the same paper is found by several different routes, its retrieval signals are relatively stable; that does not mean it is clinically more similar.
 
-检索计划把同义表达放在同一个概念组中，由程序统一生成“组内 OR、组间 AND”的查询。概念和同义词来自当前病例，不由代码预设某种疾病或药物必须怎么搜；需要使用某个数据库的特殊语法时，仍可以保留自由文本查询。
+The search plan groups synonymous expressions into the same concept group and the program generates "OR within a group, AND across groups" queries. Concepts and synonyms come from the current case; the code does not presuppose how any disease or drug must be searched. Free-text queries can still be kept when a database requires special syntax.
 
-### 3. 按来源分头查找
+### 3. Search source by source
 
-PubMed 和 Europe PMC 是英文医学文献的主干。OpenAlex 用来扩大候选范围和寻找引用关系，Crossref 只补 DOI 和出版信息，不用来证明临床事实。完整检索还会规划 CMCR、SinoMed、中国知网、万方、维普和中华医学期刊网等主要中文病例与文献入口；专科病例库和微信等渠道按病例需要加入。所有来源分别标记访问状态和证据类型。
+PubMed and Europe PMC are the backbone of English medical literature. OpenAlex widens the candidate pool and finds citation relationships; Crossref only fills in DOI and publication data and is not used to establish clinical facts. A full search also plans the major Chinese case and literature entrances — CMCR, SinoMed, CNKI, Wanfang, VIP, and the Chinese Medical Journal Network — and adds specialty case databases and channels such as WeChat when the case calls for them. Every source is labeled with its access status and evidence type.
 
-每次查询都会留下来源、查询意图、执行时间、返回数量、这一步新增了多少篇，以及失败或受限原因。“查询失败”和“没有结果”是两件不同的事。
+Every query records its source, query intent, execution time, number of returns, how many records this step added, and any failure or restriction reason. "Query failed" and "no results" are two different things.
 
-最终结果会把统计口径拆开：计划和实际成功的查询路径、实际调用的来源、查询与来源组合的执行次数、数据库报告的重叠命中、真正返回的记录、去重后的论文候选，以及逐篇核验后确认的患者病例数。论文候选数不会直接写成病例数，因为一篇论文可能包含多位患者，多篇论文也可能描述同一位患者。
+The final results split the accounting: planned and actually-successful query routes, the sources actually called, the number of executions per query–source combination, database-reported overlapping hits, records actually returned, deduplicated paper candidates, and the number of patient cases confirmed after per-case verification. The number of paper candidates is not written as the number of cases, because one paper may contain several patients and several papers may describe the same patient.
 
-### 4. 把各处结果合并并去重
+### 4. Merge and deduplicate results across sources
 
-同一篇论文可能同时出现在 PubMed、Europe PMC、OpenAlex 和出版商页面。项目依次参考 DOI、PMID、PMCID、规范化标题、年份和第一作者来合并记录，同时保留它曾经从哪些路径被找到。
+The same paper can appear in PubMed, Europe PMC, OpenAlex, and a publisher's page at once. The project merges records by DOI, then PMID, PMCID, normalized title, year, and first author, while keeping the routes through which each record was found.
 
-如果两个记录的稳定编号互相冲突，即使标题一样也不会直接合并。不同论文还可能描述同一位患者，这类情况会先标记为疑似重复，等待进一步核对。
+If two records carry stable identifiers that conflict, they are not merged even when the titles match. Different papers may also describe the same patient; such cases are flagged as suspected duplicates and held for further verification.
 
-### 5. 初筛后沿着关键论文继续找
+### 5. Follow key papers after the initial pass
 
-第一轮候选会先检查：它是否真的是病例或病例系列、有没有稳定编号、目前能看到题目、摘要还是全文。然后选出 2～5 篇较接近且身份已经确认的论文作为“种子”。
+The first-round candidates are checked first: is it really a case report or case series, does it have stable identifiers, and is the title, abstract, or full text currently visible. Then 2–5 close, identity-confirmed papers are chosen as "seeds."
 
-接下来会查看它们的相似文章、参考文献、后续引用和相关研究。新发现的病名、病理术语或作者线索还会回到前面的检索阶段，形成下一轮查找。很多少见病例正是在这一步被补出来的。
+Their similar articles, references, later citations, and related research are then reviewed. Newly discovered disease names, pathological terms, or author leads return to the earlier search stage and start the next round. Many rare cases are picked up exactly at this step.
 
-### 6. 逐项判断“像不像”
+### 6. Judge "how similar" item by item
 
-比较不是只看疾病名称，也不只依赖一个语义分数。目前使用下面这些维度组织复核：
+Comparison is not just about the disease name, nor does it rely on a single semantic score. Review is currently organized around the following dimensions:
 
-| 比较维度 | 参考权重 | 主要看什么 |
+| Comparison dimension | Reference weight | What it mainly looks at |
 | --- | ---: | --- |
-| 罕见或有辨识度的特征 | 20 | 是否出现了最不寻常、最能缩小范围的表现 |
-| 主要表现和病程 | 20 | 症状组合、出现顺序和进展方式是否接近 |
-| 影像、病理和关键检查 | 20 | 客观证据是否相符 |
-| 诊断或最接近的鉴别诊断 | 15 | 最终诊断及排除过程是否相关 |
-| 年龄、性别和基础情况 | 10 | 患者背景是否具有可比性 |
-| 干预和治疗反应 | 10 | 用药、处置和之后的变化是否接近 |
-| 结局和临床场景 | 5 | 随访结局与发生环境是否相近 |
+| Rare or discriminating features | 20 | Whether the most unusual, scope-narrowing findings appear |
+| Main presentation and course | 20 | Whether symptom clusters, order, and progression are close |
+| Imaging, pathology, and key findings | 20 | Whether objective evidence matches |
+| Diagnosis or closest differential | 15 | Whether the final diagnosis and exclusion process are relevant |
+| Age, sex, and baseline condition | 10 | Whether the patient background is comparable |
+| Intervention and treatment response | 10 | Whether medication, management, and later changes are close |
+| Outcome and clinical scenario | 5 | Whether follow-up outcomes and setting are similar |
 
-每个维度都要分别写出**相同、不同、未知**。这组权重只帮助安排阅读顺序，不是经过临床验证的诊断概率。病例相似度、文献来源质量和检索可信度始终分开判断。
+Each dimension must state **same, different, unknown** separately. These weights only order the reading, not clinically validated diagnosis probabilities. Case similarity, source quality, and retrieval confidence are always judged separately.
 
-在人工逐项比较之前，程序可以使用当前检索计划提供的病例特征，对题名和摘要做一轮可解释的初排。特征、同义词和相对权重都随病例定义；原文没有提到的内容保持“未知”，只有计划明确列出的冲突表达才会标记为不匹配。这个初排只决定先读哪篇，不代表临床相似度。
+Before the item-by-item human comparison, the program can run an explainable first pass over titles and abstracts using the case features from the current search plan. Features, synonyms, and relative weights are defined per case; anything the original text does not mention stays "unknown", and only contradiction expressions explicitly listed in the plan are marked as mismatches. This first pass only decides what to read first; it is not a clinical similarity score.
 
-需要进一步改善前排顺序时，可以选择在本地运行 MedCPT cross-encoder，对初排后的候选前缀重新打分。必需特征、明确冲突、是否为病例报告和题名关键特征仍作为排序护栏，模型只在这些信号相当的候选中细排；模型原始分数不会被解释成诊断概率。默认不安装也不启用这个较重的可选依赖。
+When the top of the list needs further improvement, you can optionally run a local MedCPT cross-encoder to rescore the pre-ranked candidate prefix. Required features, explicit contradictions, whether the record is an actual case report, and key title features remain ranking guardrails; the model only fine-ranks among candidates whose signals are comparable, and raw model scores are never interpreted as diagnosis probabilities. This heavier optional dependency is not installed or enabled by default.
 
-### 7. 检查每条结论有没有原文支持
+### 7. Check every conclusion against its source
 
-题目能证明的内容很少，摘要和全文也不能混为一谈。报告会标明一条判断实际来自题目、摘要、全文、教学页面还是二次转述，并尽量回到原始病例。
+A title can prove very little, and an abstract must not be conflated with the full text. The report marks whether a given judgment actually comes from the title, the abstract, the full text, a teaching page, or second-hand retelling, and returns to the original case wherever possible.
 
-重要临床结论会和具体来源绑定。如果原文没有提供年龄、检查或结局，就写“未知”，而不是根据常识补全。微信文章或转载可以帮助发现线索，但不能自动获得和原始论文相同的证据地位。
+Important clinical conclusions are bound to a specific source. If the original text does not provide age, findings, or outcome, the report writes "unknown" rather than filling gaps from common sense. WeChat articles or reposts can help surface leads but do not automatically gain the same evidence status as the original paper.
 
-### 8. 判断什么时候可以停止
+### 8. Decide when to stop
 
-找到第一篇看起来合适的论文并不算完成。完整流程至少要跑过高精度、表现优先、诊断与鉴别、宽泛同义词四类查询，并对较接近的种子论文做相似文章和引用扩展。
+Finding the first plausible-looking paper is not the end. A full run must at least cover the four query types — high precision, presentation, diagnosis and differential, and broad synonyms — and run similar-article and citation expansion on the closer seed papers.
 
-如果连续两次独立查询或扩展，每次新增的合理候选都少于 2 篇，或不足现有候选的 5%，可以认为在已经声明的来源范围内趋于饱和。如果因为访问权限、时间、费用或服务故障而停止，报告会直接写明限制，不会称为“已经找全”。
+If two consecutive independent queries or expansions each add fewer than 2 reasonable candidates, or less than 5% of the existing candidates, the search can be considered saturated within the declared source scope. If the run stops because of access, time, cost, or service failure, the report states the limitation plainly and does not call it "fully searched".
 
-## 结果是什么样
+## What the output looks like
 
-![相似病例检索记录示意](./assets/report-preview.svg)
+![Example similar-case search record](./assets/report-preview.svg)
 
-每条入选病例会保留原文标题、年份和稳定链接，并说明目前核对到了题目、摘要还是全文。病例之间的相同点和差异分开写；没有查到、无法访问和原文未说明，也会分开写。
+Each included case keeps its original title, year, and stable link, and states whether verification reached the title, abstract, or full text. Similarities and differences between cases are written separately; not found, inaccessible, and not stated in the original are also written separately.
 
-报告末尾会留下本次检索的范围。它不会把“查了几个常用来源”写成“找到了全部病例”。
+The report closes by stating the scope of this search. It does not turn "searched a few common sources" into "found all cases".
 
-## 可选的重排（reranker）
+## Optional reranking
 
-需要进一步改善前排顺序时，可以在 `run_search_plan.py` 上启用本地 MedCPT cross-encoder，对初排后的候选前缀重新打分。必需特征、明确冲突、是否为病例报告和题名关键特征仍作为排序护栏，模型只在这些信号相当的候选中细排；模型原始分数不会被解释成诊断概率。默认不安装也不启用这个较重的可选依赖。
+To further improve the top of the list, you can enable a local MedCPT cross-encoder on `run_search_plan.py` to rescore the pre-ranked candidate prefix. Required features, explicit contradictions, whether the record is an actual case report, and key title features remain ranking guardrails; the model only fine-ranks among candidates whose signals are comparable, and raw model scores are never interpreted as diagnosis probabilities. This heavier optional dependency is not installed or enabled by default.
 
 ```bash
 python3 -m pip install -r requirements-reranker.txt
@@ -144,12 +144,12 @@ python3 scripts/run_search_plan.py \
   --pretty
 ```
 
-模型默认使用 `ncbi/MedCPT-Cross-Encoder`。程序会记录请求与实际解析到的模型 revision、设备、批大小、截断长度、每篇候选的原始 logit 以及 rerank 前后名次。模型或依赖不可用时默认保留原排名并将状态写成 `skipped`；需要在 CI 中严格失败时加 `--reranker-required`。模型只在本机处理已去标识化的病例指纹和当前检索到的题名/摘要，但首次使用仍需联网下载模型文件。
+The default model is `ncbi/MedCPT-Cross-Encoder`. The program records the requested and actually-resolved model revision, device, batch size, truncation length, the raw logit for each candidate, and the before/after rank. When the model or its dependencies are unavailable, the pre-reranker order is preserved and the status is written as `skipped`; add `--reranker-required` when the run should fail strictly instead. The model only processes the de-identified case fingerprint and the currently retrieved titles/abstracts on your own machine, but the model files still need a one-time network download on first use.
 
-如果使用已授权的 SiliconFlow API，则不需要安装 PyTorch：
+If you use an authorized SiliconFlow API instead, PyTorch is not needed:
 
 ```bash
-export SILICONFLOW_API_KEY='在本机 shell 中设置，不要提交到 git'
+export SILICONFLOW_API_KEY='set in your local shell; never commit it to git'
 python3 scripts/run_search_plan.py \
   --plan /tmp/case-search-plan.json \
   --mode comprehensive \
@@ -159,42 +159,46 @@ python3 scripts/run_search_plan.py \
   --pretty
 ```
 
-也可以复制 [.env.example](/Users/june/code/github/find-similar-medical-cases/.env.example) 为 `.env`。SiliconFlow 模型默认是 `BAAI/bge-reranker-v2-m3`，请求会把去标识化病例指纹以及候选题名/摘要发送到远程服务；使用前应确认机构的数据出境、隐私和服务条款要求。API key 只从环境变量或被 git 忽略的 `.env` 读取，不会写入结果 JSON、Markdown 或错误信息。
+You can also copy [.env.example](./.env.example) to `.env`. The default SiliconFlow model is `BAAI/bge-reranker-v2-m3`; the request sends the de-identified case fingerprint and the candidate titles/abstracts to a remote service, so confirm your organization's data-transfer, privacy, and terms-of-service requirements before use. API keys are read only from environment variables or the git-ignored `.env`, and are never written into result JSON, Markdown, or error messages.
 
-## 还可以这样问
+## Other ways to ask
 
-> 先不要假设诊断。请从这组临床表现出发查找，并把不同诊断方向分开。
+> Don't assume the diagnosis first. Search from this set of clinical findings and keep the differential directions separate.
 
-> 除了英文论文，再补充中文病例报告和专科教学病例。不同类型的来源不要混在一起。
+> Besides English papers, add Chinese case reports and specialty teaching cases. Do not mix different source types together.
 
-> 以这篇论文为起点，继续查它的参考文献、引用它的论文和相似文章：粘贴论文链接。
+> Use this paper as the starting point and keep checking its references, its citing papers, and similar articles: paste the paper link.
 
-> 这次只做快速初查。请直接告诉我哪些地方还没查，不要称为完整检索。
+> This time only do a quick initial pass. Tell me directly what has not been searched and do not call it a complete search.
 
-## 能查到哪里
+## Where it can search
 
-英文医学文献以 PubMed 和 Europe PMC 为主，OpenAlex 和主要病例期刊补充发现与引用关系。中文病例覆盖 CMCR、SinoMed、中国知网、万方、维普、中华医学期刊网等主要入口，也可以按病例类型补充影像、病理、眼科等专科资源。
+English medical literature is centered on PubMed and Europe PMC, with OpenAlex and the major case-report journals adding discovery and citation relationships. Chinese cases cover the main entrances — CMCR, SinoMed, CNKI, Wanfang, VIP, and the Chinese Medical Journal Network — and specialty resources in imaging, pathology, ophthalmology, and others can be added per case type.
 
-有些全文和中文数据库需要个人账号或机构订阅。微信文章等内容只能作为线索，关键事实仍应回到论文或机构来源核对。涉及付费来源时，Codex 应先说明费用并征得同意。
+Some full texts and Chinese databases require a personal account or institutional subscription. Content such as WeChat articles can only serve as leads; key facts should still be verified against the paper or an institutional source. When a paid source is involved, Codex first states the cost and asks for consent.
 
-## 使用边界
+## Boundaries of use
 
-这个 Skill 面向医学研究工作，适合常见病与罕见病的相似病例回顾，也适合非典型表现、药物不良反应、特殊治疗反应、影像或病理组合、病例讨论和研究选题。
+This skill is aimed at medical research, and fits similar-case review for both common and rare diseases, as well as atypical presentations, adverse drug reactions, unusual treatment responses, imaging or pathology combinations, case discussions, and research-topic selection.
 
-它不用于个人诊断、处方、治疗选择或预后判断，也不能代替正式系统综述。病例相似不等于诊断相同，病例报告本身还可能存在信息缺失和选择性发表。
+It is not for personal diagnosis, prescribing, treatment choices, or prognosis, and it does not replace a formal systematic review. Case similarity is not the same as identical diagnosis, and case reports themselves can suffer from missing information and selective publication.
 
-未发表病例、收录延迟、语言差异、访问权限和封闭平台都会造成遗漏，所以这里的“检索完成”只针对报告中列出的范围。
+Unpublished cases, indexing delays, language differences, access restrictions, and closed platforms all cause omissions, so "search complete" here applies only to the scope stated in the report.
 
-## 隐私
+## Privacy
 
-不要发送姓名、联系方式、身份证件、病历号、精确住址、精确就诊日期、带身份信息的检查单或完整病历截图。罕见个人特征组合也可能让患者被识别，应只保留检索所需的临床事实。
+Do not send names, contact details, identity documents, medical-record numbers, exact addresses, exact visit dates, test sheets with identifying information, or full medical-record screenshots. Rare combinations of personal characteristics can also make a patient identifiable — keep only the clinical facts needed for the search.
 
-即使资料已经去除身份信息，也需要遵守所在机构的隐私、伦理和数据管理要求。
+Even after information has been de-identified, you must still comply with your institution's privacy, ethics, and data-management requirements.
 
-## 项目资料
+## Project resources
 
-- [Skill 的完整工作说明](./SKILL.md)
-- [来源及使用边界](./references/sources.md)
-- [检索流程与停止条件](./references/retrieval-workflow.md)
+- [Complete skill documentation](./SKILL.md)
+- [Sources and boundaries of use](./references/sources.md)
+- [Retrieval workflow and stopping conditions](./references/retrieval-workflow.md)
+
+## Community
+
+[**LINUX DO — Chinese Developer Community**](https://linux.do/)
 
 [MIT License](./LICENSE)
