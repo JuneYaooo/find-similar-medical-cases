@@ -129,35 +129,15 @@ PubMed 和 Europe PMC 是英文医学文献的主干。OpenAlex 用来扩大候�
 
 报告末尾会留下本次检索的范围。它不会把“查了几个常用来源”写成“找到了全部病例”。
 
-## 小规模公开案例测试
+## 可选的重排（reranker）
 
-仓库包含 PMC-Patients 论文附录中的 3 个公开案例，用于检查查询计划、跨来源去重和候选排序是否稳定。先做不联网的计划校验：
-
-```bash
-python3 scripts/benchmark_case_studies.py --dry-run --pretty
-```
-
-联网测试一个案例：
-
-```bash
-python3 scripts/benchmark_case_studies.py \
-  --cases pmc-case-1-diagnosis \
-  --limit 20 \
-  --pretty
-```
-
-联网测试全部 3 个案例：
-
-```bash
-python3 scripts/benchmark_case_studies.py --limit 20 --pretty
-```
-
-启用本地 MedCPT reranker：
+需要进一步改善前排顺序时，可以在 `run_search_plan.py` 上启用本地 MedCPT cross-encoder，对初排后的候选前缀重新打分。必需特征、明确冲突、是否为病例报告和题名关键特征仍作为排序护栏，模型只在这些信号相当的候选中细排；模型原始分数不会被解释成诊断概率。默认不安装也不启用这个较重的可选依赖。
 
 ```bash
 python3 -m pip install -r requirements-reranker.txt
-python3 scripts/benchmark_case_studies.py \
-  --cases pmc-case-1-diagnosis \
+python3 scripts/run_search_plan.py \
+  --plan /tmp/case-search-plan.json \
+  --mode comprehensive \
   --limit 20 \
   --reranker medcpt \
   --rerank-top-k 50 \
@@ -170,16 +150,16 @@ python3 scripts/benchmark_case_studies.py \
 
 ```bash
 export SILICONFLOW_API_KEY='在本机 shell 中设置，不要提交到 git'
-python3 scripts/benchmark_case_studies.py \
-  --cases pmc-case-1-diagnosis \
+python3 scripts/run_search_plan.py \
+  --plan /tmp/case-search-plan.json \
+  --mode comprehensive \
+  --limit 20 \
   --reranker siliconflow \
   --rerank-top-k 50 \
   --pretty
 ```
 
 也可以复制 [.env.example](/Users/june/code/github/find-similar-medical-cases/.env.example) 为 `.env`。SiliconFlow 模型默认是 `BAAI/bge-reranker-v2-m3`，请求会把去标识化病例指纹以及候选题名/摘要发送到远程服务；使用前应确认机构的数据出境、隐私和服务条款要求。API key 只从环境变量或被 git 忽略的 `.env` 读取，不会写入结果 JSON、Markdown 或错误信息。
-
-这只是实时 API 冒烟测试，不是完整 PMC-Patients benchmark。附录给出的每例 5 篇论文是论文中的 BM25 案例展示结果，并非穷尽的相关性标注，因此脚本只报告“参考 Top 5 重合度”和参考论文排名，不能把它称为 recall。实时结果还会随 PubMed、Europe PMC 和 OpenAlex 的索引变化。
 
 ## 还可以这样问
 

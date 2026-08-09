@@ -99,9 +99,7 @@ def validate_reference_structure(errors: List[str]) -> None:
 
 
 def validate_json(errors: List[str]) -> None:
-    paths = list((ROOT / "references").glob("*.json"))
-    paths.extend((ROOT / "benchmarks").glob("*.json"))
-    for path in sorted(paths):
+    for path in sorted((ROOT / "references").glob("*.json")):
         try:
             json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:

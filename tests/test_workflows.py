@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from copy import deepcopy
 import os
 import subprocess
 import sys
@@ -16,7 +15,6 @@ SCRIPTS = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 import run_search_plan as rsp  # noqa: E402
-import benchmark_case_studies as bcs  # noqa: E402
 import rerank_candidates as rrc  # noqa: E402
 import write_search_bundle as wsb  # noqa: E402
 
@@ -470,40 +468,6 @@ class WorkflowTests(unittest.TestCase):
             reverse=True,
         )
         self.assertEqual(ranked[0]["doi"], "10.1000/multi")
-
-    def test_pmc_patients_fixture_and_overlap_metric_contract(self) -> None:
-        benchmark = bcs.load_benchmark(
-            ROOT / "benchmarks" / "pmc-patients-case-studies.json"
-        )
-        self.assertEqual(len(benchmark["cases"]), 3)
-        self.assertIn("not exhaustive relevance judgments", benchmark["caveat"])
-        expected_executions = {
-            "pmc-case-1-diagnosis": 10,
-            "pmc-case-2-test": 12,
-            "pmc-case-3-treatment": 12,
-        }
-        for case in benchmark["cases"]:
-            self.assertEqual(len(case["reference_top5"]), 5)
-            validation = bcs.validate_plan(bcs.build_plan(case), 12)
-            self.assertEqual(
-                validation["query_source_executions"], expected_executions[case["id"]]
-            )
-        summary = bcs.overlap_summary(
-            ["1", "2", "3", "4", "5"], {"1": 2, "3": 17}
-        )
-        self.assertEqual(summary["at_5"]["count"], 1)
-        self.assertEqual(summary["at_20"]["count"], 2)
-        self.assertNotIn("recall", json.dumps(summary).casefold())
-
-        invalid = deepcopy(benchmark)
-        invalid["cases"][0]["reference_top5"][0] = "not an object"
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            path = Path(temporary_directory) / "invalid.json"
-            path.write_text(json.dumps(invalid), encoding="utf-8")
-            with self.assertRaisesRegex(
-                bcs.BenchmarkError, "reference_top5 items must be objects"
-            ):
-                bcs.load_benchmark(path)
 
     def test_result_accounting_separates_routes_records_and_verified_cases(self) -> None:
         queries = [
