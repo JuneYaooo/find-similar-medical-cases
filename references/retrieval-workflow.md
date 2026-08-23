@@ -105,7 +105,7 @@ Merge identifiers and access links, but preserve every contributing source in `f
 
 ## 6. Compare similarity
 
-Score clinical similarity separately from source quality. Use the score to organize review, not as a validated medical model.
+Score clinical similarity separately from source quality. Use the score to organize review, not as a validated medical model. For each case, select four to seven discriminating dimensions and make their weights sum to 100; do not force unrelated cases into one global disease rubric.
 
 | Dimension | Suggested weight |
 |---|---:|
@@ -117,7 +117,21 @@ Score clinical similarity separately from source quality. Use the score to organ
 | Intervention and response | 10 |
 | Outcome/context | 5 |
 
-For every high-ranked case, state matched facts, mismatched facts, and unknowns. A shared diagnostic label without similar presentation is not automatically a close case. A high similarity score does not increase evidence quality.
+After patient-level verification, score each evidenced dimension from 0 to 5:
+
+| Score | Meaning |
+|---:|---|
+| 5 | Near-equivalent presentation, timing, or objective evidence |
+| 4 | Strong match with a non-decisive difference |
+| 3 | Moderate match with one important difference |
+| 2 | Partial match with major etiologic, pathologic, or course differences |
+| 1 | Only a broad category or weak feature is shared |
+| 0 | The source explicitly reports an incompatible fact |
+| unknown | The source does not report enough patient-level evidence |
+
+Calculate the weighted clinical-similarity score only over evidenced dimensions: `100 × sum(weight × score / 5) / sum(evidenced weights)`. Report evidence coverage separately as `sum(evidenced weights) / sum(all weights)`. Never turn `unknown` into zero; doing so confuses missing reporting with a clinical mismatch. Conversely, never let denominator exclusion hide evidence gaps: display both the score and coverage, plus any decisive conflicts.
+
+For every high-ranked case, state matched facts, mismatched facts, and unknowns. A shared diagnostic label without similar presentation is not automatically a close case. A high similarity score does not increase evidence quality, retrieval confidence, or treatment relevance.
 
 Do not select a fixed number merely to fill a report. First determine eligibility from the case-local required dimensions and verified evidence. When the eligible set exceeds the configured detailed budget, select the detailed subset using the plan's ordered dimensions, such as clinical similarity, decisive conflicts, evidence completeness, original-source quality, and phenotype or management diversity. These dimensions are configurable guidance, not a universal disease score.
 
