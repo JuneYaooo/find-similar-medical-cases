@@ -129,6 +129,11 @@ def validate_candidate_features(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
         required = value.get("required", False)
         if not isinstance(required, bool):
             raise PlanError(f"{location}.required must be true or false")
+        role = sc.compact(value.get("role")) or "secondary"
+        if role not in {"primary", "secondary"}:
+            raise PlanError(f"{location}.role must be primary or secondary")
+        if role == "primary" and not required:
+            raise PlanError(f"{location} primary features must be required")
         fields = value.get("fields") or ["title", "abstract"]
         if not isinstance(fields, list) or not fields or not all(
             isinstance(field, str) and field.strip() for field in fields
@@ -157,10 +162,64 @@ def validate_candidate_features(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "mismatch_terms": mismatch_terms,
                 "weight": float(weight),
                 "required": required,
+                "role": role,
                 "fields": fields,
             }
         )
     return normalized
+
+
+def validate_primary_case_axis(
+    plan: Dict[str, Any], mode: str, features: List[Dict[str, Any]]
+) -> Optional[Dict[str, Any]]:
+    value = plan.get("primary_case_axis")
+    if value is None:
+        if mode == "comprehensive":
+            raise PlanError("comprehensive search plan requires primary_case_axis")
+        return None
+    if not isinstance(value, dict):
+        raise PlanError("primary_case_axis must be an object")
+    label = sc.compact(value.get("label"))
+    if not label:
+        raise PlanError("primary_case_axis.label must be non-empty")
+    basis = sc.compact(value.get("basis"))
+    allowed_bases = {
+        "confirmed_diagnosis",
+        "leading_diagnosis",
+        "core_syndrome",
+        "key_mechanism",
+    }
+    if basis not in allowed_bases:
+        raise PlanError(
+            "primary_case_axis.basis must be confirmed_diagnosis, "
+            "leading_diagnosis, core_syndrome, or key_mechanism"
+        )
+    certainty = sc.compact(value.get("certainty"))
+    if certainty not in {"confirmed", "suspected", "unresolved"}:
+        raise PlanError(
+            "primary_case_axis.certainty must be confirmed, suspected, or unresolved"
+        )
+    required = value.get("required_for_similarity", True)
+    if required is not True:
+        raise PlanError("primary_case_axis.required_for_similarity must be true")
+    primary_features = [feature for feature in features if feature["role"] == "primary"]
+    if not primary_features:
+        raise PlanError(
+            "primary_case_axis requires at least one primary candidate feature"
+        )
+    return {
+        "label": label,
+        "basis": basis,
+        "certainty": certainty,
+        "required_for_similarity": True,
+        "primary_feature_ids": [feature["id"] for feature in primary_features],
+        "eligibility_rule": (
+            "Verify the same primary disease or syndrome at patient level before "
+            "clinical similarity scoring. If diagnosis is unresolved, verify the "
+            "same declared core syndrome or key mechanism. Secondary features cannot "
+            "compensate for failure of this gate."
+        ),
+    }
 
 
 def validate_selection_policy(plan: Dict[str, Any]) -> Dict[str, Any]:
@@ -456,6 +515,9 @@ def annotate_feature_evidence(
     title_matched_weight = 0.0
     required_matched_weight = 0.0
     required_total_weight = 0.0
+    primary_matched_weight = 0.0
+    primary_mismatched_weight = 0.0
+    primary_total_weight = 0.0
     status_counts = {"matched": 0, "mismatched": 0, "conflicting": 0, "unknown": 0}
     for feature in features:
         match = first_feature_evidence(
@@ -479,10 +541,16 @@ def annotate_feature_evidence(
                 title_matched_weight += feature["weight"]
             if feature["required"]:
                 required_matched_weight += feature["weight"]
+            if feature["role"] == "primary":
+                primary_matched_weight += feature["weight"]
         if status in {"mismatched", "conflicting"}:
             mismatched_weight += feature["weight"]
+            if feature["role"] == "primary":
+                primary_mismatched_weight += feature["weight"]
         if feature["required"]:
             required_total_weight += feature["weight"]
+        if feature["role"] == "primary":
+            primary_total_weight += feature["weight"]
         evidence = []
         if match:
             evidence.append({"kind": "match", **match})
@@ -494,11 +562,20 @@ def annotate_feature_evidence(
                 "label": feature["label"],
                 "weight": feature["weight"],
                 "required": feature["required"],
+                "role": feature["role"],
                 "status": status,
                 "evidence": evidence,
             }
         )
     total_weight = sum(feature["weight"] for feature in features)
+    if primary_total_weight == 0:
+        primary_axis_gate = "not_configured"
+    elif primary_mismatched_weight:
+        primary_axis_gate = "document_conflict"
+    elif primary_matched_weight == primary_total_weight:
+        primary_axis_gate = "document_supports"
+    else:
+        primary_axis_gate = "document_insufficient"
     record["feature_evidence"] = {
         "method": "plan_defined_term_evidence",
         "notice": (
@@ -516,6 +593,15 @@ def annotate_feature_evidence(
         "required_evidence_match_percent": (
             round(100 * required_matched_weight / required_total_weight, 2)
             if required_total_weight
+            else None
+        ),
+        "primary_matched_weight": primary_matched_weight,
+        "primary_mismatched_weight": primary_mismatched_weight,
+        "primary_total_weight": primary_total_weight,
+        "primary_axis_gate": primary_axis_gate,
+        "primary_evidence_match_percent": (
+            round(100 * primary_matched_weight / primary_total_weight, 2)
+            if primary_total_weight
             else None
         ),
         "status_counts": status_counts,
@@ -546,8 +632,11 @@ def candidate_sort_key(
     if not use_feature_evidence:
         return (*reranker_key, *retrieval_key) if use_reranker else retrieval_key
     evidence = record["feature_evidence"]
+    primary_percent = evidence["primary_evidence_match_percent"]
     required_percent = evidence["required_evidence_match_percent"]
     return (
+        primary_percent if primary_percent is not None else -1,
+        -evidence["primary_mismatched_weight"],
         required_percent if required_percent is not None else -1,
         -evidence["mismatched_weight"],
         retrieval["case_report_signal"],
@@ -588,6 +677,7 @@ def summarize_dimensions(
                 "label": feature["label"],
                 "weight": feature["weight"],
                 "required": feature["required"],
+                "role": feature["role"],
                 "candidate_status_counts": counts,
             }
         )
@@ -933,6 +1023,9 @@ def main() -> int:
         plan = load_plan(args.plan)
         queries = validate_plan(plan, args.mode)
         candidate_features = validate_candidate_features(plan)
+        primary_case_axis = validate_primary_case_axis(
+            plan, args.mode, candidate_features
+        )
         selection_policy = validate_selection_policy(plan)
         validate_supplemental_queries(plan)
         scheduled = sum(len(query["sources"]) for query in queries)
@@ -1114,6 +1207,7 @@ def main() -> int:
     output = {
         "case_id": plan.get("case_id"),
         "case_fingerprint": plan.get("case_fingerprint"),
+        "primary_case_axis": primary_case_axis,
         "mode": args.mode,
         "retrieved_at": retrieved_at,
         "live_search": True,
@@ -1133,6 +1227,9 @@ def main() -> int:
                 query["query_representation"] == "legacy_text" for query in queries
             ),
             "candidate_features": len(candidate_features),
+            "primary_candidate_features": sum(
+                feature["role"] == "primary" for feature in candidate_features
+            ),
             "max_detailed_verified_cases": selection_policy[
                 "max_detailed_verified_cases"
             ],

@@ -14,6 +14,12 @@
     "response_and_outcome": [],
     "rare_or_discriminating_features": []
   },
+  "primary_case_axis": {
+    "label": "primary aldosteronism",
+    "basis": "confirmed_diagnosis",
+    "certainty": "confirmed",
+    "required_for_similarity": true
+  },
   "requirements": {
     "languages": ["en", "zh"],
     "include_chinese_sources": true,
@@ -23,7 +29,8 @@
   "selection_policy": {
     "max_detailed_verified_cases": 50,
     "ranking_dimensions": [
-      "case-defined clinical feature similarity",
+      "verified primary disease or syndrome match",
+      "case-defined secondary clinical feature similarity",
       "absence of decisive case-defined conflicts",
       "patient-level evidence completeness",
       "original-source quality",
@@ -32,18 +39,28 @@
   },
   "candidate_features": [
     {
+      "id": "primary-aldosteronism",
+      "label": "primary aldosteronism",
+      "terms": ["primary aldosteronism", "primary hyperaldosteronism", "Conn syndrome"],
+      "weight": 5,
+      "required": true,
+      "role": "primary"
+    },
+    {
       "id": "recurrent-hypokalemia",
       "label": "recurrent hypokalemia",
       "terms": ["recurrent hypokalemia", "recurrent hypokalaemia", "hypokalemia", "hypokalaemia"],
       "weight": 1,
-      "required": true
+      "required": true,
+      "role": "secondary"
     },
     {
       "id": "hypertension",
       "label": "hypertension",
       "terms": ["hypertension", "high blood pressure"],
       "weight": 1,
-      "required": true
+      "required": true,
+      "role": "secondary"
     },
     {
       "id": "metabolic-alkalosis",

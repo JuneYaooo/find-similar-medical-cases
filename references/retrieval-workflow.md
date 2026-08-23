@@ -105,7 +105,7 @@ Merge identifiers and access links, but preserve every contributing source in `f
 
 ## 6. Compare similarity
 
-Score clinical similarity separately from source quality. Use the score to organize review, not as a validated medical model. For each case, select four to seven discriminating dimensions and make their weights sum to 100; do not force unrelated cases into one global disease rubric.
+Score clinical similarity separately from source quality. Use the score to organize review, not as a validated medical model. First apply the primary-axis gate: verify the same primary disease or syndrome, or the same declared core syndrome or key mechanism when the input diagnosis is unresolved. A candidate that fails this gate is a related or differential near miss, not a similar case, even when it shares many secondary symptoms or tests. For cases that pass, select four to seven secondary discriminating dimensions and make their weights sum to 100; do not force unrelated cases into one global disease rubric. The weighted score describes closeness after the gate, not permission to bypass it.
 
 | Dimension | Suggested weight |
 |---|---:|

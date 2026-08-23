@@ -75,11 +75,11 @@ def source_link(record: Dict[str, Any]) -> str:
 def render_feature_table(record: Dict[str, Any]) -> List[str]:
     features = (record.get("feature_evidence") or {}).get("features", [])
     lines = [
-        "| 维度 | 权重 | 必需 | 状态 | 当前证据 |",
-        "|---|---:|---|---|---|",
+        "| 维度 | 角色 | 权重 | 必需 | 状态 | 当前证据 |",
+        "|---|---|---:|---|---|---|",
     ]
     if not features:
-        lines.append("| 未配置 | — | — | unknown | 未执行文档特征初排 |")
+        lines.append("| 未配置 | — | — | — | unknown | 未执行文档特征初排 |")
         return lines
     for feature in features:
         evidence = "; ".join(
@@ -87,8 +87,9 @@ def render_feature_table(record: Dict[str, Any]) -> List[str]:
             for item in feature.get("evidence", [])
         )
         lines.append(
-            "| {label} | {weight:g} | {required} | {status} | {evidence} |".format(
+            "| {label} | {role} | {weight:g} | {required} | {status} | {evidence} |".format(
                 label=markdown_cell(feature.get("label")),
+                role="主要病例轴" if feature.get("role") == "primary" else "次要维度",
                 weight=float(feature.get("weight") or 0),
                 required="是" if feature.get("required") else "否",
                 status=markdown_cell(feature.get("status")),
@@ -125,6 +126,7 @@ def render_case(record: Dict[str, Any], rank: int) -> str:
         f"| 来源质量 | {markdown_cell(record.get('source_quality'))} |",
         f"| 可访问范围 | {markdown_cell(record.get('access_scope'))} |",
         f"| 当前证据范围 | {markdown_cell(record.get('retrieved_evidence_scope'))} |",
+        f"| 主要病例轴证据覆盖 | {format_score(evidence.get('primary_evidence_match_percent'), '%')} |",
         f"| 检索可信度 | {markdown_cell(retrieval.get('retrieval_confidence'))} |",
         f"| RRF 融合分 | {markdown_cell(retrieval.get('rrf_score'))} |",
         f"| 最佳来源内排名 | {markdown_cell(retrieval.get('best_source_rank'))} |",
@@ -138,6 +140,7 @@ def render_case(record: Dict[str, Any], rank: int) -> str:
         "",
         f"- 特征匹配分：{format_score(evidence.get('evidence_match_percent'), '/100')}",
         f"- 必需特征覆盖率：{format_score(evidence.get('required_evidence_match_percent'), '%')}",
+        f"- 主要病例轴文档闸门：{markdown_cell(evidence.get('primary_axis_gate'))}；最终准入仍需患者级原文核验。",
         f"- 明确冲突权重：{evidence.get('mismatched_weight', '—')}",
         "- 说明：这只是题名/摘要等当前可见文本的排序依据，不是诊断概率。",
         "",
@@ -230,6 +233,7 @@ def render_overall_report(
     funnel = accounting.get("candidate_funnel") or {}
     selection = accounting.get("selection_reporting") or {}
     dimensions = (accounting.get("dimension_summary") or {}).get("dimensions", [])
+    primary_axis = payload.get("primary_case_axis") or {}
     coverage = payload.get("coverage") or []
     reranker = payload.get("reranker") or {}
     lines = [
@@ -238,6 +242,7 @@ def render_overall_report(
         f"- 检索 ID：{plain_text(payload.get('case_id')) or '未提供'}",
         f"- 检索时间：{plain_text(payload.get('retrieved_at')) or '未知'}",
         f"- 模式：{plain_text(payload.get('mode')) or '未知'}",
+        f"- 主要病例轴：{markdown_cell(primary_axis.get('label')) if primary_axis else '未声明'}；先核验同一主要病种或综合征，再比较次要维度。",
         f"- Reranker：{markdown_cell(reranker.get('status'))}；模型 {markdown_cell(reranker.get('model'))}；评分候选 {markdown_cell(reranker.get('candidates_scored'))}。",
         "- Reranker 分数是候选前缀内的原始排序信号，不是诊断概率或临床相似度概率。",
         "- 统计范围：当前文件的自动统计默认覆盖 live API 阶段；其他实际执行路径应在最终核验时补充。",
@@ -285,16 +290,17 @@ def render_overall_report(
         "",
         "## 维度汇总",
         "",
-        "| 优先级 | 维度 | 权重 | 必需 | 匹配 | 冲突 | 同时支持与冲突 | 未知 |",
-        "|---:|---|---:|---|---:|---:|---:|---:|",
+        "| 优先级 | 维度 | 角色 | 权重 | 必需 | 匹配 | 冲突 | 同时支持与冲突 | 未知 |",
+        "|---:|---|---|---:|---|---:|---:|---:|---:|",
     ]
     if dimensions:
         for dimension in dimensions:
             counts = dimension.get("candidate_status_counts") or {}
             lines.append(
-                "| {priority} | {label} | {weight:g} | {required} | {matched} | {mismatched} | {conflicting} | {unknown} |".format(
+                "| {priority} | {label} | {role} | {weight:g} | {required} | {matched} | {mismatched} | {conflicting} | {unknown} |".format(
                     priority=dimension.get("priority_order", "—"),
                     label=markdown_cell(dimension.get("label")),
+                    role="主要病例轴" if dimension.get("role") == "primary" else "次要维度",
                     weight=float(dimension.get("weight") or 0),
                     required="是" if dimension.get("required") else "否",
                     matched=counts.get("matched", 0),

@@ -34,10 +34,15 @@ class WorkflowTests(unittest.TestCase):
         plan = rsp.load_plan(str(ROOT / "references" / "search-plan-template.json"))
         queries = rsp.validate_plan(plan, "comprehensive")
         features = rsp.validate_candidate_features(plan)
+        primary_axis = rsp.validate_primary_case_axis(
+            plan, "comprehensive", features
+        )
         selection = rsp.validate_selection_policy(plan)
         rsp.validate_supplemental_queries(plan)
         self.assertEqual(len(queries), 5)
         self.assertGreater(len(features), 1)
+        self.assertEqual(primary_axis["basis"], "confirmed_diagnosis")
+        self.assertEqual(primary_axis["primary_feature_ids"], ["primary-aldosteronism"])
         self.assertTrue(
             all(q["query_representation"] == "concept_groups" for q in queries)
         )
@@ -49,6 +54,76 @@ class WorkflowTests(unittest.TestCase):
         )
         self.assertEqual(selection["max_detailed_verified_cases"], 50)
         self.assertTrue(selection["retain_all_eligible_cases"])
+
+    def test_primary_case_axis_is_a_hard_comprehensive_requirement(self) -> None:
+        features = rsp.validate_candidate_features(
+            {
+                "candidate_features": [
+                    {
+                        "id": "disease",
+                        "terms": ["disease alpha"],
+                        "required": True,
+                        "role": "primary",
+                    }
+                ]
+            }
+        )
+        with self.assertRaises(rsp.PlanError):
+            rsp.validate_primary_case_axis({}, "comprehensive", features)
+        with self.assertRaises(rsp.PlanError):
+            rsp.validate_candidate_features(
+                {
+                    "candidate_features": [
+                        {
+                            "id": "disease",
+                            "terms": ["disease alpha"],
+                            "role": "primary",
+                        }
+                    ]
+                }
+            )
+
+    def test_primary_feature_match_precedes_secondary_feature_matches(self) -> None:
+        features = rsp.validate_candidate_features(
+            {
+                "candidate_features": [
+                    {
+                        "id": "disease",
+                        "terms": ["disease alpha"],
+                        "weight": 5,
+                        "required": True,
+                        "role": "primary",
+                    },
+                    {"id": "symptom", "terms": ["symptom beta"], "weight": 1},
+                    {"id": "test", "terms": ["test gamma"], "weight": 1},
+                ]
+            }
+        )
+        same_disease = rsp.sc.base_record("pubmed", "now")
+        same_disease.update(title="Disease alpha: a case report", pmid="1")
+        symptom_only = rsp.sc.base_record("pubmed", "now")
+        symptom_only.update(
+            title="Symptom beta with test gamma: a case report", pmid="2"
+        )
+        for record in (same_disease, symptom_only):
+            rsp.annotate_candidate(record, features)
+        ranked = sorted(
+            [symptom_only, same_disease],
+            key=lambda record: rsp.candidate_sort_key(record, True),
+            reverse=True,
+        )
+        self.assertEqual(ranked[0]["pmid"], "1")
+        self.assertEqual(
+            symptom_only["feature_evidence"]["primary_evidence_match_percent"], 0.0
+        )
+        self.assertEqual(
+            same_disease["feature_evidence"]["primary_axis_gate"],
+            "document_supports",
+        )
+        self.assertEqual(
+            symptom_only["feature_evidence"]["primary_axis_gate"],
+            "document_insufficient",
+        )
 
     def test_selection_policy_limits_detail_only_after_verification(self) -> None:
         policy = rsp.validate_selection_policy(

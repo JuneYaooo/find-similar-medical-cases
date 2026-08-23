@@ -39,7 +39,7 @@ Use English variants for PubMed, Europe PMC, OpenAlex, and major case-journal di
 
 Copy `search-plan-template.json` to a temporary location and replace the example with de-identified case facts. Prefer `concept_groups` for API queries: each nested array contains interchangeable terms joined with OR, while separate arrays are joined with AND. This keeps Boolean grouping explicit without encoding disease-specific query rules in the connector. Retain legacy `text` only when a provider-specific expression cannot be represented as concept groups.
 
-Define `candidate_features` from the current case fingerprint. Terms, mismatch terms, required flags, and relative weights belong to the plan, not to global code. The deterministic matcher uses these features only to prioritize which titles and abstracts deserve review. Absence is `unknown`; only an explicit configured mismatch term can produce `mismatched` evidence.
+Define `primary_case_axis` from the current case fingerprint before defining `candidate_features`. It states the confirmed diagnosis, leading diagnosis, core syndrome, or key mechanism that determines what “same case” means. Mark supporting features with `role: primary` and `required: true`; mark symptoms, tests, treatment responses, and outcomes used for refinement as `role: secondary`. Terms, mismatch terms, roles, required flags, and relative weights belong to the plan, not to global code. The deterministic matcher uses these features only to prioritize which titles and abstracts deserve review. Absence is `unknown`; only an explicit configured mismatch term can produce `mismatched` evidence.
 
 Define a separate `selection_policy` for final presentation. `max_detailed_verified_cases` is not a retrieval limit, similarity threshold, or verification stopping rule. It applies only after source verification, patient-level deduplication, and case-local clinical inclusion. Keep all eligible cases in the machine ledger and a supplement. A plan value of 50 therefore shows every eligible case when the verified set is small and caps only the detailed narrative when the verified set is large; no disease-name list is needed.
 
@@ -84,6 +84,8 @@ Retrieval confidence is not clinical similarity and not evidence strength.
 
 Do not truncate the review queue merely because enough candidates exist to fill the final detailed report. Continue triage and expansion until the stopping rule is satisfied or a declared resource limitation is reached.
 
+Apply a primary-axis gate before clinical similarity scoring. Verify the same primary disease or syndrome in the candidate's patient-level source. When the input diagnosis is unresolved, use the declared core syndrome or key mechanism instead. A candidate that fails this gate is a related or differential near miss, not a similar case; list it separately even if it shares many secondary symptoms or tests. Do not let a weighted average or a presentation target override this gate.
+
 ## Stage 5: seed expansion
 
 After identifying two to five verified close seed cases, expand each through references, citations, and related works:
@@ -105,11 +107,11 @@ For every shortlisted candidate:
 
 1. Verify stable identity and that it describes an actual patient or case series.
 2. Record whether evidence came from title, abstract, full text, educational page, or social summary.
-3. Extract matched facts, mismatched facts, and unknowns for each weighted clinical dimension.
+3. Apply the primary-axis gate, then extract matched facts, mismatched facts, and unknowns for each weighted clinical dimension. Record the gate result separately from the secondary dimension score.
 4. Trace secondary articles and WeChat posts to the original case whenever possible.
 5. Exclude papers that merely mention the disease, aggregate cases without patient-level detail, duplicate a previously counted patient, or conflict with the requested presentation on decisive features.
 6. Keep near misses in a separate section when they illuminate a differential diagnosis.
-7. Count every patient-level verified close case before applying a detailed-presentation budget. If eligible cases exceed that budget, choose the detailed set using the plan's ranking dimensions and preserve the remainder in a supplementary eligible-case list.
+7. Count every patient-level verified close case only after the primary-axis gate and patient-level deduplication, before applying a detailed-presentation budget. If eligible cases exceed that budget, choose the detailed set using the plan's ranking dimensions and preserve the remainder in a supplementary eligible-case list. Never lower the primary-axis gate to fill the budget.
 
 ## Stopping rule
 
