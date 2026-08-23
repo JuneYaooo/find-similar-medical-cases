@@ -62,7 +62,7 @@ The output records each query-source execution and the number of newly discovere
 Search in this order while retaining all candidates:
 
 1. PubMed and Europe PMC for every core English query.
-2. OpenAlex for broad discovery, citation metadata, and queries with sparse official-index recall.
+2. OpenAlex for every comprehensive case search as an independent discovery and citation-metadata family, not only when recall appears sparse.
 3. Crossref only when DOI or publisher-metadata discovery is useful; verify clinical facts elsewhere.
 4. CMCR, SinoMed, CNKI, Wanfang, VIP, and the Chinese Medical Journal Network through browser or licensed connectors; document every attempted, blocked, subscription-only, or unavailable route.
 5. Publisher and specialty case libraries when the presentation is imaging-, pathology-, ophthalmology-, or safety-centric.
@@ -118,6 +118,7 @@ For every shortlisted candidate:
 Stop only when all applicable conditions are met; finding 50 or any other target number of cases is not a stopping condition:
 
 - All four core query families ran successfully against PubMed and Europe PMC.
+- OpenAlex ran for the core query families or its access failure is documented; a PubMed/Europe PMC-only pass is not a deep search.
 - At least one broad unfiltered query ran and its noise was triaged.
 - For a comprehensive search not explicitly limited to English, the principal Chinese routes were executed or each access failure was documented; required specialty and WeChat routes were likewise executed or documented.
 - Two to five verified seed cases received backward, forward, and related-work expansion where identifiers allow it.
