@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="980" viewBox="0 0 1440 980" role="img" aria-labelledby="title desc">
+  <title id="title">真实病例检索运行快照</title>
+  <desc id="desc">2026 年 8 月 23 日实时检索泊沙康唑相关低钾和高血压病例的结果：10 次来源调用全部成功，返回 136 条记录，去重后 71 篇候选文献，7 篇文章明确描述 8 个文献内患者单位。</desc>
+  <rect width="1440" height="980" fill="#f2eee5"/>
+  <rect x="64" y="52" width="1312" height="876" fill="#fbfaf6" stroke="#c9c1b4"/>
+  <g font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif">
+    <text x="104" y="104" fill="#a64f32" font-family="Georgia, 'Times New Roman', serif" font-size="18" font-style="italic">Live evidence snapshot / 2026.08.23</text>
+    <text x="104" y="150" fill="#203138" font-family="Georgia, 'Songti SC', serif" font-size="36" font-weight="700">一次真实病例检索跑出了什么</text>
+    <text x="104" y="184" fill="#667174" font-size="16">泊沙康唑暴露 · 高血压 · 低钾 · 低肾素 / 低醛固酮 · 代谢性碱中毒</text>
+    <text x="1198" y="104" fill="#7a756c" font-size="13">RUN / 01</text>
+    <path d="M104 214H1336" stroke="#203138" stroke-width="2"/>
+
+    <g transform="translate(104 252)">
+      <rect width="274" height="126" fill="#e8eee9" stroke="#b9c9bf"/>
+      <text x="24" y="34" fill="#a64f32" font-size="13" letter-spacing="1.5">LIVE CALLS</text>
+      <text x="24" y="84" fill="#203138" font-family="Georgia, serif" font-size="48" font-weight="700">10 / 10</text>
+      <text x="196" y="82" fill="#49695b" font-size="15">成功</text>
+    </g>
+    <g transform="translate(398 252)">
+      <rect width="274" height="126" fill="#f4e9df" stroke="#d8b8a4"/>
+      <text x="24" y="34" fill="#a64f32" font-size="13" letter-spacing="1.5">RETURNED RECORDS</text>
+      <text x="24" y="84" fill="#203138" font-family="Georgia, serif" font-size="48" font-weight="700">136</text>
+      <text x="126" y="82" fill="#667174" font-size="15">条</text>
+    </g>
+    <g transform="translate(692 252)">
+      <rect width="274" height="126" fill="#e9e4da" stroke="#c9c1b4"/>
+      <text x="24" y="34" fill="#a64f32" font-size="13" letter-spacing="1.5">DEDUPLICATED PAPERS</text>
+      <text x="24" y="84" fill="#203138" font-family="Georgia, serif" font-size="48" font-weight="700">71</text>
+      <text x="93" y="82" fill="#667174" font-size="15">候选文献</text>
+    </g>
+    <g transform="translate(986 252)">
+      <rect width="350" height="126" fill="#203138"/>
+      <text x="24" y="34" fill="#e7b39b" font-size="13" letter-spacing="1.5">PATIENT UNITS IN VERIFIED PAPERS</text>
+      <text x="24" y="84" fill="#fbfaf6" font-family="Georgia, serif" font-size="48" font-weight="700">8</text>
+      <text x="94" y="82" fill="#d9e0db" font-size="15">7 篇文章内明确描述</text>
+    </g>
+
+    <text x="104" y="432" fill="#a64f32" font-size="13" letter-spacing="1.6">候选漏斗 / PUBLICATION FUNNEL</text>
+    <path d="M104 454H1336" stroke="#c9c1b4"/>
+    <g transform="translate(104 486)">
+      <rect width="1010" height="48" fill="#d9e5dd"/>
+      <text x="20" y="31" fill="#203138" font-size="16" font-weight="600">数据库返回</text>
+      <text x="948" y="31" fill="#203138" font-size="18" font-family="Georgia, serif" font-weight="700">136</text>
+      <rect y="58" width="790" height="48" fill="#e8eee9"/>
+      <text x="20" y="89" fill="#203138" font-size="16" font-weight="600">跨来源去重</text>
+      <text x="728" y="89" fill="#203138" font-size="18" font-family="Georgia, serif" font-weight="700">71</text>
+      <rect y="116" width="480" height="48" fill="#f4e9df"/>
+      <text x="20" y="147" fill="#203138" font-size="16" font-weight="600">人工回到原文核对</text>
+      <text x="418" y="147" fill="#203138" font-size="18" font-family="Georgia, serif" font-weight="700">7 篇</text>
+      <rect y="174" width="270" height="48" fill="#203138"/>
+      <text x="20" y="205" fill="#fbfaf6" font-size="16" font-weight="600">文献内患者单位</text>
+      <text x="224" y="205" fill="#e7b39b" font-size="18" font-family="Georgia, serif" font-weight="700">8</text>
+    </g>
+    <text x="1146" y="504" fill="#667174" font-size="14">候选文献不是患者数</text>
+    <text x="1146" y="531" fill="#667174" font-size="14">一篇文章可含多位患者</text>
+    <text x="1146" y="558" fill="#667174" font-size="14">不同文章可能重复报道</text>
+    <path d="M1146 578H1336" stroke="#c9c1b4"/>
+    <text x="1146" y="612" fill="#a64f32" font-size="13" letter-spacing="1.2">证据范围</text>
+    <text x="1146" y="644" fill="#203138" font-size="16" font-weight="600">2 篇开放全文</text>
+    <text x="1146" y="671" fill="#667174" font-size="14">5 篇摘要核对</text>
+
+    <path d="M104 748H1336" stroke="#203138" stroke-width="2"/>
+    <text x="104" y="782" fill="#a64f32" font-size="13" letter-spacing="1.6">真实病例切片 / CASE GLIMPSES</text>
+    <g transform="translate(104 810)">
+      <circle cx="8" cy="8" r="5" fill="#a64f32"/>
+      <text x="28" y="14" fill="#203138" font-size="16" font-weight="600">68 岁女性 · AML</text>
+      <text x="28" y="39" fill="#667174" font-size="14">K 2.6 · HCO₃⁻ 39 · 低肾素 / 低醛固酮 · 螺内酯后改善</text>
+    </g>
+    <g transform="translate(530 810)">
+      <circle cx="8" cy="8" r="5" fill="#a64f32"/>
+      <text x="28" y="14" fill="#203138" font-size="16" font-weight="600">6 岁男孩 · 囊性纤维化</text>
+      <text x="28" y="39" fill="#667174" font-size="14">高血压与皮质醇异常 · 停药后恢复</text>
+    </g>
+    <g transform="translate(960 810)">
+      <circle cx="8" cy="8" r="5" fill="#a64f32"/>
+      <text x="28" y="14" fill="#203138" font-size="16" font-weight="600">15 岁男性 · 免疫缺陷</text>
+      <text x="28" y="39" fill="#667174" font-size="14">预防治疗期间发生高血压危象</text>
+    </g>
+
+    <path d="M104 892H1336" stroke="#c9c1b4"/>
+    <text x="104" y="916" fill="#7a756c" font-size="13">数据来源：PubMed · Europe PMC · OpenAlex；完整 PMID / DOI / 摘要证据见真实病例演示文档。</text>
+    <text x="1230" y="916" fill="#7a756c" font-size="13">SOURCE FIRST</text>
+  </g>
+</svg>

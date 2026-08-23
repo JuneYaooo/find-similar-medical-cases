@@ -26,6 +26,10 @@ After installation, open a new conversation and describe the already-de-identifi
 
 You do not need to craft a professional search string first. Age range, symptom order, key findings, medication or exposure, and treatment response are more useful than a full medical record. When information is insufficient, Codex asks follow-up questions.
 
+The repository also includes a [real-case demonstration for posaconazole-related hypokalemia and hypertension](./examples/posaconazole-real-cases.md), with a live retrieval snapshot and source-linked patient facts rather than simulated cases.
+
+![Live real-case retrieval snapshot](./assets/real-case-overview.svg)
+
 A full search writes a result bundle named after a de-identified brief and a UTC timestamp into the `output` directory of the current workspace: `search-report.md` holds the overall report, `search-results.json` holds the reproducible search ledger, and `cases/` holds an individual page for each ranked candidate. Candidate pages are not labeled as distinct patient cases until they have been verified one by one.
 
 Search and verification never stop early just to hit or stay under a fixed number of cases. The number of detailed final displays is separately configurable in the case plan — for example 50: when patient-level verification yields no more than 50 similar cases, all are shown; when there are more, the 50 with the best ranking and representativeness are shown in detail, while the remaining qualifying cases stay in the supplementary list and machine-readable results. This mechanism is triggered by the actual count of qualifying cases; it does not maintain a hardcoded "common/rare disease" list.

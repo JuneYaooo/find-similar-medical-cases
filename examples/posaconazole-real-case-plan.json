@@ -1,0 +1,63 @@
+{
+  "case_id": "real-posaconazole-hypokalemia-hypertension",
+  "case_fingerprint": {
+    "specialty": "endocrinology/pharmacovigilance",
+    "age_band": "adult",
+    "main_presentation": ["hypertension", "hypokalemia"],
+    "key_positive_findings": ["metabolic alkalosis", "suppressed renin", "suppressed aldosterone"],
+    "suspected_or_confirmed_diagnosis": ["posaconazole-induced pseudohyperaldosteronism"],
+    "intervention": ["posaconazole exposure"],
+    "rare_or_discriminating_features": ["low renin and low aldosterone"]
+  },
+  "requirements": {
+    "languages": ["en"],
+    "include_chinese_sources": false,
+    "include_wechat": false,
+    "citation_chaining": false
+  },
+  "candidate_features": [
+    {"id": "posaconazole", "label": "posaconazole exposure", "terms": ["posaconazole", "Noxafil"], "weight": 2, "required": true},
+    {"id": "hypertension", "label": "hypertension", "terms": ["hypertension", "high blood pressure"], "weight": 1, "required": true},
+    {"id": "hypokalemia", "label": "hypokalemia", "terms": ["hypokalemia", "hypokalaemia"], "weight": 1, "required": true},
+    {"id": "metabolic-alkalosis", "label": "metabolic alkalosis", "terms": ["metabolic alkalosis"], "weight": 1},
+    {"id": "low-renin-aldosterone", "label": "low renin and aldosterone", "terms": ["low renin", "suppressed renin", "low aldosterone", "suppressed aldosterone"], "weight": 1}
+  ],
+  "api_queries": [
+    {
+      "id": "q1-high-precision",
+      "text": "((posaconazole) OR (Noxafil)) AND ((pseudohyperaldosteronism) OR (apparent mineralocorticoid excess)) AND ((hypokalemia) OR (hypokalaemia)) AND ((hypertension))",
+      "intent": "high_precision",
+      "language": "en",
+      "sources": ["pubmed", "europepmc", "openalex"],
+      "case_filter": true,
+      "required": true
+    },
+    {
+      "id": "q2-presentation",
+      "text": "((posaconazole) OR (Noxafil)) AND ((hypokalemia) OR (hypokalaemia)) AND ((hypertension)) AND ((low renin) OR (suppressed renin))",
+      "intent": "presentation",
+      "language": "en",
+      "sources": ["pubmed", "europepmc"],
+      "case_filter": true,
+      "required": true
+    },
+    {
+      "id": "q3-differential",
+      "text": "((posaconazole) OR (Noxafil)) AND ((pseudohyperaldosteronism) OR (mineralocorticoid excess) OR (11 beta hydroxysteroid dehydrogenase) OR (11β-hydroxylase))",
+      "intent": "diagnosis_or_differential",
+      "language": "en",
+      "sources": ["pubmed", "europepmc"],
+      "case_filter": true,
+      "required": true
+    },
+    {
+      "id": "q4-broad-synonyms",
+      "text": "((posaconazole) OR (Noxafil)) AND ((hypokalemia) OR (hypokalaemia) OR (hypertension) OR (mineralocorticoid))",
+      "intent": "broad_synonyms",
+      "language": "en",
+      "sources": ["pubmed", "europepmc", "openalex"],
+      "case_filter": false,
+      "required": true
+    }
+  ]
+}
